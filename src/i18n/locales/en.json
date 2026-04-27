@@ -1,0 +1,109 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Log in",
+    "loginTab": "Login",
+    "registerTab": "Sign up",
+    "logout": "Log out",
+    "orLoginWith": "or log in with",
+    "orRegisterWith": "or sign up with",
+    "email": "Email address",
+    "password": "Password",
+    "firstname": "First name",
+    "lastname": "Last name",
+    "landing": {
+      "title": "Organize your trips with friends",
+      "subtitle": "Expenses, itinerary and documents.\nFind everything in one place.",
+      "cta": "Create my first trip →"
+    },
+    "loginScreen": {
+      "title": "Log in",
+      "subtitle": "Welcome back — pick up your trip where you left off and keep dreaming... 💭",
+      "submit": "Log in",
+      "forgotPasswordShort": "Forgot password?",
+      "googleBtn": "Google",
+      "emailPlaceholder": "you@example.com",
+      "passwordPlaceholder": "••••••••"
+    },
+    "registerScreen": {
+      "title": "Create your account",
+      "subtitle": "Join Triplaning for free and start your adventure with ease! ✈️",
+      "submit": "Sign up for free",
+      "firstnamePlaceholder": "John",
+      "lastnamePlaceholder": "Doe",
+      "passwordPlaceholder": "At least 8 characters"
+    }
+  },
+  "validation": {
+    "emailRequired": "Email is required",
+    "emailInvalid": "Email is not valid",
+    "passwordRequired": "Password is required",
+    "firstnameRequired": "First name is required",
+    "lastnameRequired": "Last name is required",
+    "passwordTooShort": "Password must be at least 8 characters"
+  },
+  "errors": {
+    "generic": "An error occurred, please try again"
+  },
+  "trips": {
+    "myTrips": "My trips",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "createTrip": "Create a trip",
+    "tripName": "Trip name",
+    "departure": "Departure",
+    "return": "Return",
+    "noTrips": "No trips yet",
+    "budget": "Budget",
+    "balance": "Balance",
+    "travelers": "Travelers"
+  },
+  "expenses": {
+    "accommodations": "Accommodation",
+    "transports": "Transport",
+    "activities": "Activities",
+    "onSite": "On-site expenses",
+    "various": "Miscellaneous expenses",
+    "total": "Total",
+    "perPerson": "Per person",
+    "paidBy": "Paid by"
+  },
+  "planning": {
+    "calendar": "Calendar",
+    "event": "Event",
+    "addEvent": "Add an event"
+  },
+  "checklist": {
+    "title": "Checklist",
+    "addItem": "Add an item",
+    "shared": "Shared"
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "addDestination": "Add a destination"
+  },
+  "profile": {
+    "title": "Profile",
+    "settings": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "currency": "Preferred currency",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications"
+  }
+}
