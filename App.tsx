@@ -3,10 +3,15 @@ import React, { useEffect } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet, View, ActivityIndicator } from 'react-native'
+import { StyleSheet, View, ActivityIndicator, Text, TextInput } from 'react-native'
 import RootNavigator from './src/navigation/RootNavigator'
 import { useAuthStore } from './src/stores/authStore'
 import { COLORS } from './src/constants'
+
+if ((Text as any).defaultProps == null) (Text as any).defaultProps = {}
+;(Text as any).defaultProps.allowFontScaling = false
+if ((TextInput as any).defaultProps == null) (TextInput as any).defaultProps = {}
+;(TextInput as any).defaultProps.allowFontScaling = false
 
 function AppContent() {
   const { isLoading, restore } = useAuthStore()

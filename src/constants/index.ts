@@ -1,4 +1,12 @@
+import { Dimensions } from 'react-native'
+
 export const API_URL = 'http://localhost:8000/api'
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const scale = SCREEN_WIDTH <= 375 ? 0.82 : Math.min(1, SCREEN_WIDTH / 390)
+
+/** Responsive font size. Usage: fs(16) → scales relative to iPhone 15 width */
+export const fs = (size: number) => Math.round(size * scale)
 
 export const COLORS = {
   primary: '#14b8a6',      // teal-500 — oklch(70.4% 0.14 182.503)
@@ -18,13 +26,13 @@ export const COLORS = {
 }
 
 export const SPACING = {
-  xxs: 2,
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xxs: Math.round(2 * scale),
+  xs: Math.round(4 * scale),
+  sm: Math.round(8 * scale),
+  md: Math.round(16 * scale),
+  lg: Math.round(24 * scale),
+  xl: Math.round(32 * scale),
+  xxl: Math.round(48 * scale),
 }
 
 export const BORDER_RADIUS = {

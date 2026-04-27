@@ -14,6 +14,7 @@ interface AuthState {
 
   login: (email: string, password: string) => Promise<void>
   register: (firstname: string, lastname: string, email: string, password: string) => Promise<void>
+  loginWithToken: (token: string, user: User) => Promise<void>
   logout: () => Promise<void>
   restore: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -37,6 +38,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await Keychain.setGenericPassword('token', data.token, { service: KEYCHAIN_SERVICE })
     setAuthToken(data.token)
     set({ user: data.user, token: data.token, isAuthenticated: true })
+  },
+
+  loginWithToken: async (token, user) => {
+    await Keychain.setGenericPassword('token', token, { service: KEYCHAIN_SERVICE })
+    setAuthToken(token)
+    set({ user, token, isAuthenticated: true })
   },
 
   logout: async () => {

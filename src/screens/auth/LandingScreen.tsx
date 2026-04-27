@@ -7,22 +7,22 @@ import {
     Image,
     ImageBackground,
     StatusBar,
+    useWindowDimensions,
 } from 'react-native'
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
 import {useTranslation} from 'react-i18next'
 import {NativeStackNavigationProp} from '@react-navigation/native-stack'
 import {AuthStackParamList} from '../../types/navigation'
-import {COLORS, SPACING, BORDER_RADIUS, FONTS} from '../../constants'
+import {COLORS, SPACING, BORDER_RADIUS, FONTS, fs} from '../../constants'
 
 type Props = {
     navigation: NativeStackNavigationProp<AuthStackParamList, 'Landing'>
 }
 
-const FONT_SIZE = 38
-
 export default function LandingScreen({navigation}: Props) {
     const insets = useSafeAreaInsets()
     const {t} = useTranslation()
+    const titleFontSize = fs(38)
 
     return (
         <ImageBackground
@@ -44,7 +44,7 @@ export default function LandingScreen({navigation}: Props) {
                 </TouchableOpacity>
             </View>
             <View style={[styles.content, {paddingBottom: insets.bottom + SPACING.xl}]}>
-                <Text style={styles.titleBlock}>{t('auth.landing.title')}</Text>
+                <Text style={[styles.titleBlock, {fontSize: titleFontSize, lineHeight: titleFontSize + 2}]}>{t('auth.landing.title')}</Text>
                 <Text style={styles.subtitle}>{t('auth.landing.subtitle')}</Text>
                 <TouchableOpacity style={styles.ctaBtn}
                                   onPress={() => navigation.navigate('Login', {initialTab: 'register'})}
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     },
     brandRow: {flexDirection: 'row', alignItems: 'center', gap: SPACING.xs},
     logo: {width: 40, height: 40},
-    brandName: {fontFamily: FONTS.semiBold, fontSize: 18, color: '#fff', letterSpacing: -0.3},
+    brandName: {fontFamily: FONTS.semiBold, fontSize: fs(18), color: '#fff', letterSpacing: -0.3},
     loginBtn: {
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.55)',
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         backgroundColor: 'rgba(255,255,255,0.08)',
     },
-    loginBtnText: {fontFamily: FONTS.medium, color: '#fff', fontSize: 15},
+    loginBtnText: {fontFamily: FONTS.medium, color: '#fff', fontSize: fs(15)},
     content: {
         flex: 1,
         justifyContent: 'flex-end',
@@ -92,9 +92,7 @@ const styles = StyleSheet.create({
     titleBlock: {
         fontFamily: FONTS.semiBold,
         marginBottom: SPACING.md,
-        fontSize: FONT_SIZE,
         color: '#fff',
-        lineHeight: FONT_SIZE + 2,
         letterSpacing: -1,
         textShadowColor: 'rgba(0,0,0,0.4)',
         textShadowOffset: {width: 0, height: 2},
@@ -103,15 +101,15 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         fontFamily: FONTS.regular,
-        fontSize: 16,
+        fontSize: fs(16),
         color: 'rgba(255,255,255,0.85)',
-        lineHeight: 22,
+        lineHeight: fs(22),
         marginBottom: SPACING.xl,
         textAlign: 'center',
     },
     ctaBtn: {
         backgroundColor: COLORS.primary,
-        paddingVertical: 16,
+        paddingVertical: SPACING.md,
         borderRadius: BORDER_RADIUS.full,
         alignItems: 'center',
         shadowColor: '#000',
@@ -122,5 +120,5 @@ const styles = StyleSheet.create({
         borderColor: COLORS.primaryBorder,
         borderWidth: 2,
     },
-    ctaBtnText: {fontFamily: FONTS.semiBold, color: '#fff', fontSize: 16, letterSpacing: 0.2},
+    ctaBtnText: {fontFamily: FONTS.semiBold, color: '#fff', fontSize: fs(16), letterSpacing: 0.2},
 })

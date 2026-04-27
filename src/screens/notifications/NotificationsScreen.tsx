@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
+import { fs } from '../../constants'
 
 export default function NotificationsScreen() {
   return (
@@ -11,5 +12,5 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold' },
+  title: { fontSize: fs(24), fontWeight: 'bold' },
 })

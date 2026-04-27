@@ -21,10 +21,12 @@
     "react-i18next": "^17.0.4",
     "react-native": "0.85.2",
     "react-native-gesture-handler": "^2.31.1",
+    "react-native-inappbrowser-reborn": "^3.7.1",
     "react-native-keychain": "^10.0.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.24.0",
     "react-native-svg": "^15.15.4",
+    "react-native-webview": "^13.16.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import apiClient from './client'
 import { User } from '../types'
 
@@ -29,8 +30,22 @@ export const authApi = {
     return data
   },
 
-  googleAuthUrl: async (): Promise<{ url: string }> => {
-    const { data } = await apiClient.get<{ url: string }>('/connect/google')
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post('/password/claim', { email })
+  },
+
+  googleAuthUrl: async (): Promise<{ authUrl: string; redirectUri: string; codeVerifier: string }> => {
+    const { data } = await apiClient.get<{ authUrl: string; redirectUri: string; codeVerifier: string }>('/connect/google/mobile', {
+      headers: { 'X-Platform': Platform.OS },
+    })
+    return data
+  },
+
+  googleCallback: async (code: string, codeVerifier: string): Promise<LoginResponse> => {
+    const { data } = await apiClient.get<LoginResponse>('/connect/google/mobile-check', {
+      params: { code, codeVerifier },
+      headers: { 'X-Platform': Platform.OS },
+    })
     return data
   },
 }

@@ -8,6 +8,7 @@
     "edit": "Edit",
     "confirm": "Confirm",
     "back": "Back",
+    "next": "Next",
     "yes": "Yes",
     "no": "No"
   },
@@ -17,6 +18,7 @@
     "registerTab": "Sign up",
     "logout": "Log out",
     "orLoginWith": "or log in with",
+    "googleComingSoon": "Google sign-in will be available soon.",
     "orRegisterWith": "or sign up with",
     "email": "Email address",
     "password": "Password",
@@ -35,6 +37,16 @@
       "googleBtn": "Google",
       "emailPlaceholder": "you@example.com",
       "passwordPlaceholder": "••••••••"
+    },
+    "forgotScreen": {
+      "title": "Forgot password?",
+      "subtitle": "Don't worry, it happens to the best of us.",
+      "cardDescription": "Enter the email address linked to your account and we'll send you a link to reset your password.",
+      "submit": "Send reset link",
+      "spamNote": "If you haven't received an email, please check your spam folder.",
+      "successTitle": "The email has been sent.",
+      "successSubtitle": "Check your inbox and follow the instructions to reset your password.",
+      "backToLogin": "Back to login"
     },
     "registerScreen": {
       "title": "Create your account",

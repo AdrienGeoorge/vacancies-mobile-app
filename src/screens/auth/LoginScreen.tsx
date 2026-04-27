@@ -1,12 +1,14 @@
-import React, {useState} from 'react'
+import React, {useState, useRef, useEffect} from 'react'
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
+    Pressable,
     StyleSheet,
     ScrollView,
-    KeyboardAvoidingView,
+    Animated,
+    Easing,
     Platform,
     ActivityIndicator,
     Alert,
@@ -20,7 +22,9 @@ import {RouteProp} from '@react-navigation/native'
 import {useTranslation} from 'react-i18next'
 import {AuthStackParamList} from '../../types/navigation'
 import {useAuthStore} from '../../stores/authStore'
-import {COLORS, SPACING, BORDER_RADIUS, FONTS} from '../../constants'
+import {COLORS, SPACING, BORDER_RADIUS, FONTS, fs} from '../../constants'
+import {authApi} from '../../api/auth'
+import {openGoogleAuth} from '../../components/GoogleAuthWebView'
 
 const DARK_BG = '#1C1C1E'
 const ICON_COLOR = '#9CA3AF'
@@ -61,7 +65,7 @@ function UserIcon() {
     )
 }
 
-function EyeIcon({visible}: { visible: boolean }) {
+function EyeIcon({visible}: {visible: boolean}) {
     return visible ? (
         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
             <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
@@ -92,6 +96,295 @@ function GoogleLogo() {
     )
 }
 
+
+type LoginFormProps = {
+    onSubmit: (email: string, password: string) => Promise<void>
+    onForgotPassword: () => void
+}
+
+function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
+    const {t} = useTranslation()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [errors, setErrors] = useState({email: '', password: ''})
+    const emailRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
+    const validate = () => {
+        const e = {email: '', password: ''}
+        let valid = true
+        if (!email.trim()) { e.email = t('validation.emailRequired'); valid = false }
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { e.email = t('validation.emailInvalid'); valid = false }
+        if (!password) { e.password = t('validation.passwordRequired'); valid = false }
+        setErrors(e)
+        return valid
+    }
+
+    const handleSubmit = async () => {
+        if (!validate()) return
+        setIsLoading(true)
+        try {
+            await onSubmit(email.trim(), password)
+        } catch (err: any) {
+            Alert.alert(t('common.error'), err?.response?.data?.message || t('errors.generic'))
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return (
+        <View style={styles.form}>
+            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]} onPress={() => emailRef.current?.focus()}>
+                <MailIcon/>
+                <View style={styles.inputInner}>
+                    <Text style={styles.inputLabel}>{t('auth.email')}</Text>
+                    <TextInput
+                        ref={emailRef}
+                        style={styles.inputText}
+                        value={email}
+                        onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => ({...e, email: ''})) }}
+                        placeholder={t('auth.loginScreen.emailPlaceholder')}
+                        placeholderTextColor="#D1D5DB"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="email"
+                        textContentType="username"
+                        returnKeyType="next"
+                        onSubmitEditing={() => passwordRef.current?.focus()}
+                        submitBehavior="submit"
+                    />
+                </View>
+            </Pressable>
+            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+
+            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]} onPress={() => passwordRef.current?.focus()}>
+                <LockIcon/>
+                <View style={styles.inputInner}>
+                    <Text style={styles.inputLabel}>{t('auth.password')}</Text>
+                    {showPassword ? (
+                        <TextInput
+                            ref={passwordRef}
+                            style={styles.inputText}
+                            value={password}
+                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            placeholder={t('auth.loginScreen.passwordPlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            secureTextEntry={false}
+                            textContentType="none"
+                            autoComplete="off"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                        />
+                    ) : (
+                        <TextInput
+                            ref={passwordRef}
+                            style={styles.inputText}
+                            value={password}
+                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onEndEditing={e => setPassword(e.nativeEvent.text)}
+                            placeholder={t('auth.loginScreen.passwordPlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            secureTextEntry={true}
+                            textContentType="password"
+                            autoComplete="off"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                        />
+                    )}
+                </View>
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)}
+                                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <EyeIcon visible={showPassword}/>
+                </TouchableOpacity>
+            </Pressable>
+            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
+            <TouchableOpacity style={styles.forgotRow} onPress={onForgotPassword}>
+                <Text style={styles.forgotText}>{t('auth.loginScreen.forgotPasswordShort')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={isLoading} activeOpacity={0.85}>
+                {isLoading
+                    ? <ActivityIndicator color="#fff" size="small"/>
+                    : <Text style={styles.submitBtnText}>{t('auth.loginScreen.submit')}</Text>
+                }
+            </TouchableOpacity>
+        </View>
+    )
+}
+
+type RegisterFormProps = {
+    onSubmit: (firstname: string, lastname: string, email: string, password: string) => Promise<void>
+}
+
+function RegisterForm({onSubmit}: RegisterFormProps) {
+    const {t} = useTranslation()
+    const [firstname, setFirstname] = useState('')
+    const [lastname, setLastname] = useState('')
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [errors, setErrors] = useState({firstname: '', lastname: '', email: '', password: ''})
+    const firstnameRef = useRef<TextInput>(null)
+    const lastnameRef = useRef<TextInput>(null)
+    const emailRef = useRef<TextInput>(null)
+    const passwordRef = useRef<TextInput>(null)
+
+    const validate = () => {
+        const e = {firstname: '', lastname: '', email: '', password: ''}
+        let valid = true
+        if (!firstname.trim()) { e.firstname = t('validation.firstnameRequired'); valid = false }
+        if (!lastname.trim()) { e.lastname = t('validation.lastnameRequired'); valid = false }
+        if (!email.trim()) { e.email = t('validation.emailRequired'); valid = false }
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { e.email = t('validation.emailInvalid'); valid = false }
+        if (!password) { e.password = t('validation.passwordRequired'); valid = false }
+        else if (password.length < 8) { e.password = t('validation.passwordTooShort'); valid = false }
+        setErrors(e)
+        return valid
+    }
+
+    const handleSubmit = async () => {
+        if (!validate()) return
+        setIsLoading(true)
+        try {
+            await onSubmit(firstname.trim(), lastname.trim(), email.trim(), password)
+        } catch (err: any) {
+            Alert.alert(t('common.error'), err?.response?.data?.message || t('errors.generic'))
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return (
+        <View style={styles.form}>
+            <View style={styles.nameRow}>
+                <Pressable style={[styles.inputField, styles.nameField, errors.firstname ? styles.inputError : undefined]} onPress={() => firstnameRef.current?.focus()}>
+                    <UserIcon/>
+                    <View style={styles.inputInner}>
+                        <Text style={styles.inputLabel}>{t('auth.firstname')}</Text>
+                        <TextInput
+                            ref={firstnameRef}
+                            style={styles.inputText}
+                            value={firstname}
+                            onChangeText={v => { setFirstname(v); if (errors.firstname) setErrors(e => ({...e, firstname: ''})) }}
+                            placeholder={t('auth.registerScreen.firstnamePlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            autoCapitalize="words"
+                            autoComplete="given-name"
+                            textContentType="givenName"
+                            returnKeyType="next"
+                            onSubmitEditing={() => lastnameRef.current?.focus()}
+                            submitBehavior="submit"
+                        />
+                    </View>
+                </Pressable>
+                <Pressable style={[styles.inputField, styles.nameField, errors.lastname ? styles.inputError : undefined]} onPress={() => lastnameRef.current?.focus()}>
+                    <UserIcon/>
+                    <View style={styles.inputInner}>
+                        <Text style={styles.inputLabel}>{t('auth.lastname')}</Text>
+                        <TextInput
+                            ref={lastnameRef}
+                            style={styles.inputText}
+                            value={lastname}
+                            onChangeText={v => { setLastname(v); if (errors.lastname) setErrors(e => ({...e, lastname: ''})) }}
+                            placeholder={t('auth.registerScreen.lastnamePlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            autoCapitalize="words"
+                            autoComplete="family-name"
+                            textContentType="familyName"
+                            returnKeyType="next"
+                            onSubmitEditing={() => emailRef.current?.focus()}
+                            submitBehavior="submit"
+                        />
+                    </View>
+                </Pressable>
+            </View>
+            {(errors.firstname || errors.lastname) && (
+                <View style={styles.nameRow}>
+                    <Text style={[styles.errorText, styles.nameField]}>{errors.firstname}</Text>
+                    <Text style={[styles.errorText, styles.nameField]}>{errors.lastname}</Text>
+                </View>
+            )}
+
+            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]} onPress={() => emailRef.current?.focus()}>
+                <MailIcon/>
+                <View style={styles.inputInner}>
+                    <Text style={styles.inputLabel}>{t('auth.email')}</Text>
+                    <TextInput
+                        ref={emailRef}
+                        style={styles.inputText}
+                        value={email}
+                        onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => ({...e, email: ''})) }}
+                        placeholder={t('auth.loginScreen.emailPlaceholder')}
+                        placeholderTextColor="#D1D5DB"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="email"
+                        textContentType="emailAddress"
+                        returnKeyType="next"
+                        onSubmitEditing={() => passwordRef.current?.focus()}
+                        submitBehavior="submit"
+                    />
+                </View>
+            </Pressable>
+            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+
+            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]} onPress={() => passwordRef.current?.focus()}>
+                <LockIcon/>
+                <View style={styles.inputInner}>
+                    <Text style={styles.inputLabel}>{t('auth.password')}</Text>
+                    {showPassword ? (
+                        <TextInput
+                            ref={passwordRef}
+                            style={styles.inputText}
+                            value={password}
+                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            placeholder={t('auth.registerScreen.passwordPlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            secureTextEntry={false}
+                            textContentType="none"
+                            autoComplete="off"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                        />
+                    ) : (
+                        <TextInput
+                            ref={passwordRef}
+                            style={styles.inputText}
+                            value={password}
+                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onEndEditing={e => setPassword(e.nativeEvent.text)}
+                            placeholder={t('auth.registerScreen.passwordPlaceholder')}
+                            placeholderTextColor="#D1D5DB"
+                            secureTextEntry={true}
+                            textContentType="none"
+                            autoComplete="off"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                        />
+                    )}
+                </View>
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)}
+                                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <EyeIcon visible={showPassword}/>
+                </TouchableOpacity>
+            </Pressable>
+            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
+            <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={isLoading} activeOpacity={0.85}>
+                {isLoading
+                    ? <ActivityIndicator color="#fff" size="small"/>
+                    : <Text style={styles.submitBtnText}>{t('auth.registerScreen.submit')}</Text>
+                }
+            </TouchableOpacity>
+        </View>
+    )
+}
+
 type Tab = 'login' | 'register'
 
 type Props = {
@@ -104,91 +397,69 @@ export default function LoginScreen({navigation, route}: Props) {
     const insets = useSafeAreaInsets()
     const login = useAuthStore(state => state.login)
     const register = useAuthStore(state => state.register)
+    const loginWithToken = useAuthStore(state => state.loginWithToken)
 
     const [activeTab, setActiveTab] = useState<Tab>(route.params?.initialTab ?? 'login')
-    const [firstname, setFirstname] = useState('')
-    const [lastname, setLastname] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const [errors, setErrors] = useState({firstname: '', lastname: '', email: '', password: ''})
+
+    const keyboardHeight = useRef(new Animated.Value(0)).current
+    useEffect(() => {
+        const show = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            e => Animated.timing(keyboardHeight, {
+                toValue: e.endCoordinates.height,
+                duration: e.duration || 250,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: false,
+            }).start()
+        )
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            e => Animated.timing(keyboardHeight, {
+                toValue: 0,
+                duration: e.duration || 250,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: false,
+            }).start()
+        )
+        return () => { show.remove(); hide.remove() }
+    }, [])
 
     const switchTab = (tab: Tab) => {
         Keyboard.dismiss()
         setActiveTab(tab)
-        setErrors({firstname: '', lastname: '', email: '', password: ''})
     }
 
-    const validate = () => {
-        const newErrors = {firstname: '', lastname: '', email: '', password: ''}
-        let valid = true
-
-        if (activeTab === 'register') {
-            if (!firstname.trim()) {
-                newErrors.firstname = t('validation.firstnameRequired');
-                valid = false
-            }
-            if (!lastname.trim()) {
-                newErrors.lastname = t('validation.lastnameRequired');
-                valid = false
-            }
-        }
-
-        if (!email.trim()) {
-            newErrors.email = t('validation.emailRequired');
-            valid = false
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            newErrors.email = t('validation.emailInvalid');
-            valid = false
-        }
-
-        if (!password) {
-            newErrors.password = t('validation.passwordRequired');
-            valid = false
-        } else if (activeTab === 'register' && password.length < 8) {
-            newErrors.password = t('validation.passwordTooShort');
-            valid = false
-        }
-
-        setErrors(newErrors)
-        return valid
-    }
-
-    const handleSubmit = async () => {
-        if (!validate()) return
-        setIsLoading(true)
+    const handleGooglePress = async () => {
         try {
-            if (activeTab === 'login') {
-                await login(email.trim(), password)
-            } else {
-                await register(firstname.trim(), lastname.trim(), email.trim(), password)
-            }
-        } catch (error: any) {
-            Alert.alert(t('common.error'), error?.response?.data?.message || t('errors.generic'))
-        } finally {
-            setIsLoading(false)
+            const {authUrl, redirectUri, codeVerifier} = await authApi.googleAuthUrl()
+            const code = await openGoogleAuth(authUrl, redirectUri)
+            if (!code) return
+            const data = await authApi.googleCallback(code, codeVerifier)
+            await loginWithToken(data.token, data.user)
+        } catch (e: any) {
+            Alert.alert(t('common.error'), e?.response?.data?.message || t('errors.generic'))
         }
     }
 
     const title = activeTab === 'login' ? t('auth.loginScreen.title') : t('auth.registerScreen.title')
     const subtitle = activeTab === 'login' ? t('auth.loginScreen.subtitle') : t('auth.registerScreen.subtitle')
-    const submitLabel = activeTab === 'login' ? t('auth.loginScreen.submit') : t('auth.registerScreen.submit')
 
     return (
         <ImageBackground source={require('../../assets/hero-login.jpg')} style={styles.root} resizeMode="cover">
             <View style={styles.overlay}/>
-            <View style={[styles.header, {paddingTop: insets.top + SPACING.sm}]}>
-                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                    <BackArrow/>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>{title}</Text>
-                <Text style={styles.headerSubtitle}>{subtitle}</Text>
-            </View>
+            <Animated.View style={[styles.kav, {paddingBottom: keyboardHeight}]}>
+                <View style={[styles.header, {paddingTop: insets.top + SPACING.sm}]}>
+                    <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                        <BackArrow/>
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.headerTitle}>{title}</Text>
+                        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                    </View>
+                </View>
 
-            <View style={styles.spacer}/>
+                <View style={styles.spacer}/>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <View style={[styles.card, {paddingBottom: insets.bottom + SPACING.md}]}>
                     <ScrollView
                         contentContainerStyle={styles.scroll}
@@ -216,122 +487,14 @@ export default function LoginScreen({navigation, route}: Props) {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.form}>
-                            {activeTab === 'register' && (
-                                <>
-                                    <View style={styles.nameRow}>
-                                        <View
-                                            style={[styles.inputField, styles.nameField, errors.firstname && styles.inputError]}>
-                                            <UserIcon/>
-                                            <View style={styles.inputInner}>
-                                                <Text style={styles.inputLabel}>{t('auth.firstname')}</Text>
-                                                <TextInput
-                                                    style={styles.inputText}
-                                                    value={firstname}
-                                                    onChangeText={v => {
-                                                        setFirstname(v);
-                                                        if (errors.firstname) setErrors(e => ({...e, firstname: ''}))
-                                                    }}
-                                                    placeholder={t('auth.registerScreen.firstnamePlaceholder')}
-                                                    placeholderTextColor="#D1D5DB"
-                                                    autoCapitalize="words"
-                                                    autoComplete="given-name"
-                                                    returnKeyType="next"
-                                                />
-                                            </View>
-                                        </View>
-                                        <View
-                                            style={[styles.inputField, styles.nameField, errors.lastname && styles.inputError]}>
-                                            <UserIcon/>
-                                            <View style={styles.inputInner}>
-                                                <Text style={styles.inputLabel}>{t('auth.lastname')}</Text>
-                                                <TextInput
-                                                    style={styles.inputText}
-                                                    value={lastname}
-                                                    onChangeText={v => {
-                                                        setLastname(v);
-                                                        if (errors.lastname) setErrors(e => ({...e, lastname: ''}))
-                                                    }}
-                                                    placeholder={t('auth.registerScreen.lastnamePlaceholder')}
-                                                    placeholderTextColor="#D1D5DB"
-                                                    autoCapitalize="words"
-                                                    autoComplete="family-name"
-                                                    returnKeyType="next"
-                                                />
-                                            </View>
-                                        </View>
-                                    </View>
-                                    {(errors.firstname || errors.lastname) && (
-                                        <View style={styles.nameRow}>
-                                            <Text style={[styles.errorText, styles.nameField]}>{errors.firstname}</Text>
-                                            <Text style={[styles.errorText, styles.nameField]}>{errors.lastname}</Text>
-                                        </View>
-                                    )}
-                                </>
-                            )}
-                            <View style={[styles.inputField, errors.email && styles.inputError]}>
-                                <MailIcon/>
-                                <View style={styles.inputInner}>
-                                    <Text style={styles.inputLabel}>{t('auth.email')}</Text>
-                                    <TextInput
-                                        style={styles.inputText}
-                                        value={email}
-                                        onChangeText={v => {
-                                            setEmail(v);
-                                            if (errors.email) setErrors(e => ({...e, email: ''}))
-                                        }}
-                                        placeholder={t('auth.loginScreen.emailPlaceholder')}
-                                        placeholderTextColor="#D1D5DB"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        autoComplete="email"
-                                        returnKeyType="next"
-                                    />
-                                </View>
-                            </View>
-                            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-                            <View style={[styles.inputField, errors.password && styles.inputError]}>
-                                <LockIcon/>
-                                <View style={styles.inputInner}>
-                                    <Text style={styles.inputLabel}>{t('auth.password')}</Text>
-                                    <TextInput
-                                        style={styles.inputText}
-                                        value={password}
-                                        onChangeText={v => {
-                                            setPassword(v);
-                                            if (errors.password) setErrors(e => ({...e, password: ''}))
-                                        }}
-                                        placeholder={activeTab === 'login' ? t('auth.loginScreen.passwordPlaceholder') : t('auth.registerScreen.passwordPlaceholder')}
-                                        placeholderTextColor="#D1D5DB"
-                                        secureTextEntry={!showPassword}
-                                        autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
-                                        returnKeyType="done"
-                                        onSubmitEditing={handleSubmit}
-                                    />
-                                </View>
-                                <TouchableOpacity onPress={() => setShowPassword(v => !v)}
-                                                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                                    <EyeIcon visible={showPassword}/>
-                                </TouchableOpacity>
-                            </View>
-                            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
-
-                            {activeTab === 'login' && (
-                                <TouchableOpacity style={styles.forgotRow}
-                                                  onPress={() => navigation.navigate('ForgotPassword')}>
-                                    <Text style={styles.forgotText}>{t('auth.loginScreen.forgotPasswordShort')}</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={isLoading}
-                                              activeOpacity={0.85}>
-                                {isLoading
-                                    ? <ActivityIndicator color="#fff" size="small"/>
-                                    : <Text style={styles.submitBtnText}>{submitLabel}</Text>
-                                }
-                            </TouchableOpacity>
-                        </View>
+                        {activeTab === 'login' ? (
+                            <LoginForm
+                                onSubmit={login}
+                                onForgotPassword={() => navigation.navigate('ForgotPassword')}
+                            />
+                        ) : (
+                            <RegisterForm onSubmit={register}/>
+                        )}
 
                         <View style={styles.separator}>
                             <View style={styles.separatorLine}/>
@@ -340,13 +503,13 @@ export default function LoginScreen({navigation, route}: Props) {
                             </Text>
                             <View style={styles.separatorLine}/>
                         </View>
-                        <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
+                        <TouchableOpacity style={styles.googleBtn} onPress={handleGooglePress} activeOpacity={0.85}>
                             <GoogleLogo/>
                             <Text style={styles.googleBtnText}>{t('auth.loginScreen.googleBtn')}</Text>
                         </TouchableOpacity>
                     </ScrollView>
                 </View>
-            </KeyboardAvoidingView>
+            </Animated.View>
         </ImageBackground>
     )
 }
@@ -354,12 +517,10 @@ export default function LoginScreen({navigation, route}: Props) {
 const styles = StyleSheet.create({
     root: {flex: 1, backgroundColor: DARK_BG},
     overlay: {position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)'},
+    kav: {flex: 1},
     spacer: {flex: 1},
 
-    header: {
-        paddingHorizontal: SPACING.lg,
-        paddingBottom: SPACING.xxl,
-    },
+    header: {paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl},
     backBtn: {
         width: 40,
         height: 40,
@@ -369,34 +530,26 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.xl,
+        marginBottom: SPACING.xl
     },
     headerTitle: {
         fontFamily: FONTS.display,
-        fontSize: 30,
+        fontSize: fs(30),
         color: '#ffffff',
         letterSpacing: -0.5,
-        lineHeight: 36,
+        lineHeight: fs(36),
         marginBottom: 4,
     },
     headerSubtitle: {
         fontFamily: FONTS.regular,
-        fontSize: 15,
+        fontSize: fs(15),
         color: 'rgba(255,255,255,0.7)',
-        lineHeight: 22,
+        lineHeight: fs(22),
         marginTop: 8,
     },
 
-    card: {
-        backgroundColor: '#ffffff',
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-    },
-    scroll: {
-        paddingHorizontal: SPACING.lg,
-        paddingTop: SPACING.lg,
-        paddingBottom: SPACING.sm,
-    },
+    card: {backgroundColor: '#ffffff', borderRadius: 40, overflow: 'hidden'},
+    scroll: {paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: SPACING.sm},
 
     tabContainer: {
         flexDirection: 'row',
@@ -405,12 +558,7 @@ const styles = StyleSheet.create({
         padding: 4,
         marginBottom: SPACING.lg,
     },
-    tab: {
-        flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: BORDER_RADIUS.full,
-    },
+    tab: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: BORDER_RADIUS.full},
     tabActive: {
         backgroundColor: '#ffffff',
         shadowColor: '#000',
@@ -419,11 +567,10 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    tabText: {fontFamily: FONTS.medium, fontSize: 14, color: '#9CA3AF'},
+    tabText: {fontFamily: FONTS.medium, fontSize: fs(14), color: '#9CA3AF'},
     tabTextActive: {fontFamily: FONTS.semiBold, color: '#111827'},
 
     form: {gap: SPACING.sm},
-
     nameRow: {flexDirection: 'row', gap: SPACING.sm},
     nameField: {flex: 1},
 
@@ -440,13 +587,13 @@ const styles = StyleSheet.create({
     },
     inputError: {borderColor: COLORS.danger},
     inputInner: {flex: 1},
-    inputLabel: {fontFamily: FONTS.regular, fontSize: 11, color: ICON_COLOR, marginBottom: 2},
-    inputText: {fontFamily: FONTS.regular, fontSize: 15, color: COLORS.text, padding: 0},
+    inputLabel: {fontFamily: FONTS.regular, fontSize: fs(11), color: ICON_COLOR, marginBottom: 2},
+    inputText: {fontFamily: FONTS.regular, fontSize: fs(15), color: COLORS.text, padding: 0},
 
-    errorText: {fontFamily: FONTS.regular, fontSize: 12, color: COLORS.danger},
+    errorText: {fontFamily: FONTS.regular, fontSize: fs(12), color: COLORS.danger},
 
     forgotRow: {alignItems: 'flex-end'},
-    forgotText: {fontFamily: FONTS.medium, fontSize: 13, color: COLORS.textSecondary},
+    forgotText: {fontFamily: FONTS.medium, fontSize: fs(13), color: COLORS.textSecondary, marginVertical: 4},
 
     submitBtn: {
         backgroundColor: COLORS.primary,
@@ -456,7 +603,7 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.full,
         alignItems: 'center',
     },
-    submitBtnText: {fontFamily: FONTS.semiBold, color: '#fff', fontSize: 16},
+    submitBtnText: {fontFamily: FONTS.semiBold, color: '#fff', fontSize: fs(16)},
 
     separator: {
         flexDirection: 'row',
@@ -465,7 +612,7 @@ const styles = StyleSheet.create({
         marginVertical: SPACING.lg,
     },
     separatorLine: {flex: 1, height: 1, backgroundColor: COLORS.border},
-    separatorText: {fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary},
+    separatorText: {fontFamily: FONTS.regular, fontSize: fs(12), color: COLORS.textSecondary},
 
     googleBtn: {
         flexDirection: 'row',
@@ -478,5 +625,8 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         backgroundColor: '#ffffff',
     },
-    googleBtnText: {fontFamily: FONTS.medium, fontSize: 15, color: COLORS.text},
+    googleBtnText: {fontFamily: FONTS.medium, fontSize: fs(15), color: COLORS.text},
+
+    backStepBtn: {alignItems: 'center', paddingVertical: 8},
+    backStepText: {fontFamily: FONTS.medium, fontSize: fs(14), color: COLORS.textSecondary},
 })
