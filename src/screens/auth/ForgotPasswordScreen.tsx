@@ -50,6 +50,15 @@ function CheckCircleIcon() {
     )
 }
 
+function ErrorCircleIcon() {
+    return (
+        <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
+            <Path stroke={COLORS.danger} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+        </Svg>
+    )
+}
+
 type Props = {
     navigation: NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>
 }
@@ -63,6 +72,7 @@ export default function ForgotPasswordScreen({navigation}: Props) {
     const [emailError, setEmailError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [success, setSuccess] = useState(false)
+    const [error, setError] = useState('')
 
     const keyboardHeight = useRef(new Animated.Value(0)).current
     useEffect(() => {
@@ -85,7 +95,7 @@ export default function ForgotPasswordScreen({navigation}: Props) {
             }).start()
         )
         return () => { show.remove(); hide.remove() }
-    }, [])
+    }, [keyboardHeight])
 
     const validate = () => {
         if (!email.trim()) {
@@ -105,8 +115,8 @@ export default function ForgotPasswordScreen({navigation}: Props) {
         try {
             await authApi.forgotPassword(email.trim())
             setSuccess(true)
-        } catch {
-            setSuccess(true)
+        } catch(e: any) {
+            setError(e?.response?.data?.message || t('errors.generic'))
         } finally {
             setIsLoading(false)
         }
@@ -128,17 +138,20 @@ export default function ForgotPasswordScreen({navigation}: Props) {
                     <View style={styles.spacer}/>
 
                     <Pressable onPress={Keyboard.dismiss} style={[styles.card, {paddingBottom: insets.bottom + SPACING.lg}]}>
-                        {success ? (
-                            <View style={styles.successContainer}>
-                                <CheckCircleIcon/>
-                                <Text style={styles.successTitle}>{t('auth.forgotScreen.successTitle')}</Text>
-                                <Text style={styles.successSubtitle}>{t('auth.forgotScreen.successSubtitle')}</Text>
+                        {success || error ? (
+                            <View style={styles.responseContainer}>
+                                {error ? <ErrorCircleIcon/> : <CheckCircleIcon/>}
+                                <Text style={styles.responseTitle}>{ error ? 'Oops...' : t('auth.forgotScreen.successTitle')}</Text>
+                                <Text style={styles.responseSubtitle}>{error ? error : t('auth.forgotScreen.successSubtitle')}</Text>
                                 <TouchableOpacity
                                     style={styles.backToLoginBtn}
-                                    onPress={() => navigation.navigate('Login', {initialTab: 'login'})}
+                                    onPress={() => error ? setError('') : navigation.navigate('Login', {initialTab: 'login'})}
                                     activeOpacity={0.85}
                                 >
-                                    <Text style={styles.backToLoginText}>{t('auth.forgotScreen.backToLogin')}</Text>
+                                    { error ?
+                                        <Text style={styles.backToLoginText}>{t('auth.forgotScreen.retry')}</Text> :
+                                        <Text style={styles.backToLoginText}>{t('auth.forgotScreen.backToLogin')}</Text>
+                                    }
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -307,18 +320,18 @@ const styles = StyleSheet.create({
     },
     submitBtnText: {fontFamily: FONTS.semiBold, color: '#fff', fontSize: fs(16)},
 
-    successContainer: {
+    responseContainer: {
         alignItems: 'center',
         paddingVertical: SPACING.xl,
         gap: SPACING.md,
     },
-    successTitle: {
+    responseTitle: {
         fontFamily: FONTS.semiBold,
         fontSize: fs(22),
         color: COLORS.text,
         textAlign: 'center',
     },
-    successSubtitle: {
+    responseSubtitle: {
         fontFamily: FONTS.regular,
         fontSize: fs(15),
         color: COLORS.textSecondary,

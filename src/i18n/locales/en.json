@@ -46,7 +46,8 @@
       "spamNote": "If you haven't received an email, please check your spam folder.",
       "successTitle": "The email has been sent.",
       "successSubtitle": "Check your inbox and follow the instructions to reset your password.",
-      "backToLogin": "Back to login"
+      "backToLogin": "Back to login",
+      "retry": "Retry"
     },
     "registerScreen": {
       "title": "Create your account",
