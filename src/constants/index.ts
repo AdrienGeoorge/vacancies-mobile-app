@@ -1,6 +1,6 @@
 import { Dimensions } from 'react-native'
 
-export const API_URL = 'http://localhost:8000/api'
+export const API_URL = 'http://192.168.1.22:8000/api'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const scale = SCREEN_WIDTH <= 375 ? 0.82 : Math.min(1, SCREEN_WIDTH / 390)
