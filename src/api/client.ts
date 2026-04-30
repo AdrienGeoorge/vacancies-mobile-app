@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_URL } from '../constants'
+import { tokenStorage } from './tokenStorage'
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -8,19 +9,17 @@ const apiClient = axios.create({
   },
 })
 
-// Stockage du token en mémoire (sera hydraté depuis Keychain au démarrage)
-let authToken: string | null = null
-
 export function setAuthToken(token: string | null) {
-  authToken = token
+  tokenStorage.set(token)
 }
 
-// Intercepteur request — ajoute le JWT et la locale
+// Intercepteur request — lit le token depuis tokenStorage (survit au Fast Refresh)
 apiClient.interceptors.request.use(config => {
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`
+  const token = tokenStorage.get()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
-  config.headers['X-Locale'] = 'fr' // TODO: récupérer depuis i18n
+  config.headers['X-Locale'] = 'fr'
   return config
 })
 
@@ -29,8 +28,7 @@ apiClient.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Token expiré → déconnexion gérée par le store
-      setAuthToken(null)
+      tokenStorage.set(null)
     }
     return Promise.reject(error)
   },

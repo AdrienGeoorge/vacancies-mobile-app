@@ -26,8 +26,8 @@ export const authApi = {
   },
 
   me: async (): Promise<User> => {
-    const { data } = await apiClient.get<User>('/user/me')
-    return data
+    const { data } = await apiClient.get<{ user: User }>('/user/me')
+    return data.user
   },
 
   forgotPassword: async (email: string): Promise<void> => {

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import Keychain from 'react-native-keychain'
 import { User } from '../types'
 import { setAuthToken } from '../api/client'
+import { tokenStorage } from '../api/tokenStorage'
 import { authApi } from '../api/auth'
 
 const KEYCHAIN_SERVICE = 'triplaning_auth'
@@ -57,12 +58,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const credentials = await Keychain.getGenericPassword({ service: KEYCHAIN_SERVICE })
       if (credentials) {
         const token = credentials.password
+        tokenStorage.set(token)
         setAuthToken(token)
         const user = await authApi.me()
         set({ user, token, isAuthenticated: true })
       }
     } catch {
-      // Token invalide ou absent — on reste déconnecté
+      tokenStorage.set(null)
     } finally {
       set({ isLoading: false })
     }

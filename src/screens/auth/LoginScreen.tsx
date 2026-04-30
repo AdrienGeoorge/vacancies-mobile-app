@@ -25,47 +25,12 @@ import {useAuthStore} from '../../stores/authStore'
 import {COLORS, SPACING, BORDER_RADIUS, FONTS, fs} from '../../constants'
 import {authApi} from '../../api/auth'
 import {openGoogleAuth} from '../../components/GoogleAuthWebView'
+import {BackArrow, GoogleLogo, LockIcon, MailIcon, UserIcon} from "../../utils/icons.tsx"
 
 const DARK_BG = '#1C1C1E'
 const ICON_COLOR = '#9CA3AF'
 
-function BackArrow() {
-    return (
-        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-            <Path stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-        </Svg>
-    )
-}
-
-function MailIcon() {
-    return (
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>
-        </Svg>
-    )
-}
-
-function LockIcon() {
-    return (
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
-        </Svg>
-    )
-}
-
-function UserIcon() {
-    return (
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-        </Svg>
-    )
-}
-
-function EyeIcon({visible}: {visible: boolean}) {
+const EyeIcon = ({visible}: { visible: boolean }) => {
     return visible ? (
         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
             <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
@@ -81,28 +46,13 @@ function EyeIcon({visible}: {visible: boolean}) {
     )
 }
 
-function GoogleLogo() {
-    return (
-        <Svg width={20} height={20} viewBox="0 0 48 48">
-            <Path fill="#EA4335"
-                  d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <Path fill="#4285F4"
-                  d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <Path fill="#FBBC05"
-                  d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <Path fill="#34A853"
-                  d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </Svg>
-    )
-}
-
 
 type LoginFormProps = {
     onSubmit: (email: string, password: string) => Promise<void>
     onForgotPassword: () => void
 }
 
-function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
+const LoginForm = ({onSubmit, onForgotPassword}: LoginFormProps) => {
     const {t} = useTranslation()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -114,9 +64,17 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
     const validate = () => {
         const e = {email: '', password: ''}
         let valid = true
-        if (!email.trim()) { e.email = t('validation.emailRequired'); valid = false }
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { e.email = t('validation.emailInvalid'); valid = false }
-        if (!password) { e.password = t('validation.passwordRequired'); valid = false }
+        if (!email.trim()) {
+            e.email = t('validation.emailRequired');
+            valid = false
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            e.email = t('validation.emailInvalid');
+            valid = false
+        }
+        if (!password) {
+            e.password = t('validation.passwordRequired');
+            valid = false
+        }
         setErrors(e)
         return valid
     }
@@ -135,7 +93,8 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
 
     return (
         <View style={styles.form}>
-            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]} onPress={() => emailRef.current?.focus()}>
+            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]}
+                       onPress={() => emailRef.current?.focus()}>
                 <MailIcon/>
                 <View style={styles.inputInner}>
                     <Text style={styles.inputLabel}>{t('auth.email')}</Text>
@@ -143,7 +102,10 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
                         ref={emailRef}
                         style={styles.inputText}
                         value={email}
-                        onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => ({...e, email: ''})) }}
+                        onChangeText={v => {
+                            setEmail(v);
+                            if (errors.email) setErrors(e => ({...e, email: ''}))
+                        }}
                         placeholder={t('auth.loginScreen.emailPlaceholder')}
                         placeholderTextColor="#D1D5DB"
                         keyboardType="email-address"
@@ -159,7 +121,8 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
             </Pressable>
             {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
-            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]} onPress={() => passwordRef.current?.focus()}>
+            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]}
+                       onPress={() => passwordRef.current?.focus()}>
                 <LockIcon/>
                 <View style={styles.inputInner}>
                     <Text style={styles.inputLabel}>{t('auth.password')}</Text>
@@ -168,7 +131,10 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
                             ref={passwordRef}
                             style={styles.inputText}
                             value={password}
-                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onChangeText={v => {
+                                setPassword(v);
+                                if (errors.password) setErrors(e => ({...e, password: ''}))
+                            }}
                             placeholder={t('auth.loginScreen.passwordPlaceholder')}
                             placeholderTextColor="#D1D5DB"
                             secureTextEntry={false}
@@ -182,7 +148,10 @@ function LoginForm({onSubmit, onForgotPassword}: LoginFormProps) {
                             ref={passwordRef}
                             style={styles.inputText}
                             value={password}
-                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onChangeText={v => {
+                                setPassword(v);
+                                if (errors.password) setErrors(e => ({...e, password: ''}))
+                            }}
                             onEndEditing={e => setPassword(e.nativeEvent.text)}
                             placeholder={t('auth.loginScreen.passwordPlaceholder')}
                             placeholderTextColor="#D1D5DB"
@@ -219,7 +188,7 @@ type RegisterFormProps = {
     onSubmit: (firstname: string, lastname: string, email: string, password: string) => Promise<void>
 }
 
-function RegisterForm({onSubmit}: RegisterFormProps) {
+const RegisterForm = ({onSubmit}: RegisterFormProps) => {
     const {t} = useTranslation()
     const [firstname, setFirstname] = useState('')
     const [lastname, setLastname] = useState('')
@@ -236,12 +205,28 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
     const validate = () => {
         const e = {firstname: '', lastname: '', email: '', password: ''}
         let valid = true
-        if (!firstname.trim()) { e.firstname = t('validation.firstnameRequired'); valid = false }
-        if (!lastname.trim()) { e.lastname = t('validation.lastnameRequired'); valid = false }
-        if (!email.trim()) { e.email = t('validation.emailRequired'); valid = false }
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { e.email = t('validation.emailInvalid'); valid = false }
-        if (!password) { e.password = t('validation.passwordRequired'); valid = false }
-        else if (password.length < 8) { e.password = t('validation.passwordTooShort'); valid = false }
+        if (!firstname.trim()) {
+            e.firstname = t('validation.firstnameRequired');
+            valid = false
+        }
+        if (!lastname.trim()) {
+            e.lastname = t('validation.lastnameRequired');
+            valid = false
+        }
+        if (!email.trim()) {
+            e.email = t('validation.emailRequired');
+            valid = false
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            e.email = t('validation.emailInvalid');
+            valid = false
+        }
+        if (!password) {
+            e.password = t('validation.passwordRequired');
+            valid = false
+        } else if (password.length < 8) {
+            e.password = t('validation.passwordTooShort');
+            valid = false
+        }
         setErrors(e)
         return valid
     }
@@ -261,7 +246,9 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
     return (
         <View style={styles.form}>
             <View style={styles.nameRow}>
-                <Pressable style={[styles.inputField, styles.nameField, errors.firstname ? styles.inputError : undefined]} onPress={() => firstnameRef.current?.focus()}>
+                <Pressable
+                    style={[styles.inputField, styles.nameField, errors.firstname ? styles.inputError : undefined]}
+                    onPress={() => firstnameRef.current?.focus()}>
                     <UserIcon/>
                     <View style={styles.inputInner}>
                         <Text style={styles.inputLabel}>{t('auth.firstname')}</Text>
@@ -269,7 +256,10 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                             ref={firstnameRef}
                             style={styles.inputText}
                             value={firstname}
-                            onChangeText={v => { setFirstname(v); if (errors.firstname) setErrors(e => ({...e, firstname: ''})) }}
+                            onChangeText={v => {
+                                setFirstname(v);
+                                if (errors.firstname) setErrors(e => ({...e, firstname: ''}))
+                            }}
                             placeholder={t('auth.registerScreen.firstnamePlaceholder')}
                             placeholderTextColor="#D1D5DB"
                             autoCapitalize="words"
@@ -281,7 +271,9 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                         />
                     </View>
                 </Pressable>
-                <Pressable style={[styles.inputField, styles.nameField, errors.lastname ? styles.inputError : undefined]} onPress={() => lastnameRef.current?.focus()}>
+                <Pressable
+                    style={[styles.inputField, styles.nameField, errors.lastname ? styles.inputError : undefined]}
+                    onPress={() => lastnameRef.current?.focus()}>
                     <UserIcon/>
                     <View style={styles.inputInner}>
                         <Text style={styles.inputLabel}>{t('auth.lastname')}</Text>
@@ -289,7 +281,10 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                             ref={lastnameRef}
                             style={styles.inputText}
                             value={lastname}
-                            onChangeText={v => { setLastname(v); if (errors.lastname) setErrors(e => ({...e, lastname: ''})) }}
+                            onChangeText={v => {
+                                setLastname(v);
+                                if (errors.lastname) setErrors(e => ({...e, lastname: ''}))
+                            }}
                             placeholder={t('auth.registerScreen.lastnamePlaceholder')}
                             placeholderTextColor="#D1D5DB"
                             autoCapitalize="words"
@@ -309,7 +304,8 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                 </View>
             )}
 
-            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]} onPress={() => emailRef.current?.focus()}>
+            <Pressable style={[styles.inputField, errors.email ? styles.inputError : undefined]}
+                       onPress={() => emailRef.current?.focus()}>
                 <MailIcon/>
                 <View style={styles.inputInner}>
                     <Text style={styles.inputLabel}>{t('auth.email')}</Text>
@@ -317,7 +313,10 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                         ref={emailRef}
                         style={styles.inputText}
                         value={email}
-                        onChangeText={v => { setEmail(v); if (errors.email) setErrors(e => ({...e, email: ''})) }}
+                        onChangeText={v => {
+                            setEmail(v);
+                            if (errors.email) setErrors(e => ({...e, email: ''}))
+                        }}
                         placeholder={t('auth.loginScreen.emailPlaceholder')}
                         placeholderTextColor="#D1D5DB"
                         keyboardType="email-address"
@@ -333,7 +332,8 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
             </Pressable>
             {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
-            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]} onPress={() => passwordRef.current?.focus()}>
+            <Pressable style={[styles.inputField, errors.password ? styles.inputError : undefined]}
+                       onPress={() => passwordRef.current?.focus()}>
                 <LockIcon/>
                 <View style={styles.inputInner}>
                     <Text style={styles.inputLabel}>{t('auth.password')}</Text>
@@ -342,7 +342,10 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                             ref={passwordRef}
                             style={styles.inputText}
                             value={password}
-                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onChangeText={v => {
+                                setPassword(v);
+                                if (errors.password) setErrors(e => ({...e, password: ''}))
+                            }}
                             placeholder={t('auth.registerScreen.passwordPlaceholder')}
                             placeholderTextColor="#D1D5DB"
                             secureTextEntry={false}
@@ -356,7 +359,10 @@ function RegisterForm({onSubmit}: RegisterFormProps) {
                             ref={passwordRef}
                             style={styles.inputText}
                             value={password}
-                            onChangeText={v => { setPassword(v); if (errors.password) setErrors(e => ({...e, password: ''})) }}
+                            onChangeText={v => {
+                                setPassword(v);
+                                if (errors.password) setErrors(e => ({...e, password: ''}))
+                            }}
                             onEndEditing={e => setPassword(e.nativeEvent.text)}
                             placeholder={t('auth.registerScreen.passwordPlaceholder')}
                             placeholderTextColor="#D1D5DB"
@@ -421,8 +427,11 @@ export default function LoginScreen({navigation, route}: Props) {
                 useNativeDriver: false,
             }).start()
         )
-        return () => { show.remove(); hide.remove() }
-    }, [])
+        return () => {
+            show.remove();
+            hide.remove()
+        }
+    }, [keyboardHeight])
 
     const switchTab = (tab: Tab) => {
         Keyboard.dismiss()

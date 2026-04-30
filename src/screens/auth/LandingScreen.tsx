@@ -7,7 +7,6 @@ import {
     Image,
     ImageBackground,
     StatusBar,
-    useWindowDimensions,
 } from 'react-native'
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
 import {useTranslation} from 'react-i18next'
@@ -44,7 +43,10 @@ export default function LandingScreen({navigation}: Props) {
                 </TouchableOpacity>
             </View>
             <View style={[styles.content, {paddingBottom: insets.bottom + SPACING.xl}]}>
-                <Text style={[styles.titleBlock, {fontSize: titleFontSize, lineHeight: titleFontSize + 2}]}>{t('auth.landing.title')}</Text>
+                <Text style={[styles.titleBlock, {
+                    fontSize: titleFontSize,
+                    lineHeight: titleFontSize + 2
+                }]}>{t('auth.landing.title')}</Text>
                 <Text style={styles.subtitle}>{t('auth.landing.subtitle')}</Text>
                 <TouchableOpacity style={styles.ctaBtn}
                                   onPress={() => navigation.navigate('Login', {initialTab: 'register'})}

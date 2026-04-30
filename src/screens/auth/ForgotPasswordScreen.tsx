@@ -13,51 +13,15 @@ import {
     Keyboard, Pressable,
 } from 'react-native'
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
-import Svg, {Path} from 'react-native-svg'
 import {NativeStackNavigationProp} from '@react-navigation/native-stack'
 import {useTranslation} from 'react-i18next'
 import {AuthStackParamList} from '../../types/navigation'
 import {authApi} from '../../api/auth'
 import {COLORS, SPACING, BORDER_RADIUS, FONTS, fs} from '../../constants'
+import {BackArrow, CheckCircleIcon, ErrorCircleIcon, MailIcon} from "../../utils/icons.tsx"
 
 const DARK_BG = '#1C1C1E'
 const ICON_COLOR = '#9CA3AF'
-
-function BackArrow() {
-    return (
-        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-            <Path stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-        </Svg>
-    )
-}
-
-function MailIcon() {
-    return (
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path stroke={ICON_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>
-        </Svg>
-    )
-}
-
-function CheckCircleIcon() {
-    return (
-        <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-            <Path stroke={COLORS.primary} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-        </Svg>
-    )
-}
-
-function ErrorCircleIcon() {
-    return (
-        <Svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-            <Path stroke={COLORS.danger} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-                  d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
-        </Svg>
-    )
-}
 
 type Props = {
     navigation: NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>
@@ -94,7 +58,10 @@ export default function ForgotPasswordScreen({navigation}: Props) {
                 useNativeDriver: false,
             }).start()
         )
-        return () => { show.remove(); hide.remove() }
+        return () => {
+            show.remove();
+            hide.remove()
+        }
     }, [keyboardHeight])
 
     const validate = () => {
@@ -115,7 +82,7 @@ export default function ForgotPasswordScreen({navigation}: Props) {
         try {
             await authApi.forgotPassword(email.trim())
             setSuccess(true)
-        } catch(e: any) {
+        } catch (e: any) {
             setError(e?.response?.data?.message || t('errors.generic'))
         } finally {
             setIsLoading(false)
@@ -124,93 +91,97 @@ export default function ForgotPasswordScreen({navigation}: Props) {
 
     return (
         <ImageBackground source={require('../../assets/hero-login.jpg')} style={styles.root} resizeMode="cover">
-                <View style={styles.overlay}/>
+            <View style={styles.overlay}/>
 
-                <Animated.View style={[styles.kav, {paddingBottom: keyboardHeight}]}>
-                    <View style={[styles.header, {paddingTop: insets.top + SPACING.sm}]}>
-                        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                            <BackArrow/>
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>{t('auth.forgotScreen.title')}</Text>
-                        <Text style={styles.headerSubtitle}>{t('auth.forgotScreen.subtitle')}</Text>
-                    </View>
+            <Animated.View style={[styles.kav, {paddingBottom: keyboardHeight}]}>
+                <View style={[styles.header, {paddingTop: insets.top + SPACING.sm}]}>
+                    <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                        <BackArrow/>
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('auth.forgotScreen.title')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('auth.forgotScreen.subtitle')}</Text>
+                </View>
 
-                    <View style={styles.spacer}/>
+                <View style={styles.spacer}/>
 
-                    <Pressable onPress={Keyboard.dismiss} style={[styles.card, {paddingBottom: insets.bottom + SPACING.lg}]}>
-                        {success || error ? (
-                            <View style={styles.responseContainer}>
-                                {error ? <ErrorCircleIcon/> : <CheckCircleIcon/>}
-                                <Text style={styles.responseTitle}>{ error ? 'Oops...' : t('auth.forgotScreen.successTitle')}</Text>
-                                <Text style={styles.responseSubtitle}>{error ? error : t('auth.forgotScreen.successSubtitle')}</Text>
-                                <TouchableOpacity
-                                    style={styles.backToLoginBtn}
-                                    onPress={() => error ? setError('') : navigation.navigate('Login', {initialTab: 'login'})}
-                                    activeOpacity={0.85}
-                                >
-                                    { error ?
-                                        <Text style={styles.backToLoginText}>{t('auth.forgotScreen.retry')}</Text> :
-                                        <Text style={styles.backToLoginText}>{t('auth.forgotScreen.backToLogin')}</Text>
-                                    }
-                                </TouchableOpacity>
-                            </View>
-                        ) : (
-                            <View style={styles.form}>
-                                <Text style={styles.cardDescription}>{t('auth.forgotScreen.cardDescription')}</Text>
+                <Pressable onPress={Keyboard.dismiss}
+                           style={[styles.card, {paddingBottom: insets.bottom + SPACING.lg}]}>
+                    {success || error ? (
+                        <View style={styles.responseContainer}>
+                            {error ? <ErrorCircleIcon/> : <CheckCircleIcon/>}
+                            <Text
+                                style={styles.responseTitle}>{error ? 'Oops...' : t('auth.forgotScreen.successTitle')}</Text>
+                            <Text
+                                style={styles.responseSubtitle}>{error ? error : t('auth.forgotScreen.successSubtitle')}</Text>
+                            <TouchableOpacity
+                                style={styles.backToLoginBtn}
+                                onPress={() => error ? setError('') : navigation.navigate('Login', {initialTab: 'login'})}
+                                activeOpacity={0.85}
+                            >
+                                {error ?
+                                    <Text style={styles.backToLoginText}>{t('auth.forgotScreen.retry')}</Text> :
+                                    <Text style={styles.backToLoginText}>{t('auth.forgotScreen.backToLogin')}</Text>
+                                }
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={styles.form}>
+                            <Text style={styles.cardDescription}>{t('auth.forgotScreen.cardDescription')}</Text>
 
-                                <Pressable style={[styles.inputField, emailError ? styles.inputError : null]} onPress={() => emailRef.current?.focus()}>
-                                    <MailIcon/>
-                                    <View style={styles.inputInner}>
-                                        <Text style={styles.inputLabel}>{t('auth.email')}</Text>
-                                        <TextInput
-                                            ref={emailRef}
-                                            style={styles.inputText}
-                                            value={email}
-                                            onChangeText={v => {
-                                                setEmail(v)
-                                                if (emailError) setEmailError('')
-                                            }}
-                                            placeholder={t('auth.loginScreen.emailPlaceholder')}
-                                            placeholderTextColor="#D1D5DB"
-                                            keyboardType="email-address"
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            autoComplete="email"
-                                            returnKeyType="send"
-                                            onSubmitEditing={handleSubmit}
-                                        />
-                                    </View>
-                                </Pressable>
-                                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                            <Pressable style={[styles.inputField, emailError ? styles.inputError : null]}
+                                       onPress={() => emailRef.current?.focus()}>
+                                <MailIcon/>
+                                <View style={styles.inputInner}>
+                                    <Text style={styles.inputLabel}>{t('auth.email')}</Text>
+                                    <TextInput
+                                        ref={emailRef}
+                                        style={styles.inputText}
+                                        value={email}
+                                        onChangeText={v => {
+                                            setEmail(v)
+                                            if (emailError) setEmailError('')
+                                        }}
+                                        placeholder={t('auth.loginScreen.emailPlaceholder')}
+                                        placeholderTextColor="#D1D5DB"
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        autoComplete="email"
+                                        returnKeyType="send"
+                                        onSubmitEditing={handleSubmit}
+                                    />
+                                </View>
+                            </Pressable>
+                            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-                                <TouchableOpacity
-                                    style={styles.submitBtn}
-                                    onPress={handleSubmit}
-                                    disabled={isLoading}
-                                    activeOpacity={0.85}
-                                >
-                                    {isLoading
-                                        ? <ActivityIndicator color="#fff" size="small"/>
-                                        : <Text style={styles.submitBtnText}>{t('auth.forgotScreen.submit')}</Text>
-                                    }
-                                </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.submitBtn}
+                                onPress={handleSubmit}
+                                disabled={isLoading}
+                                activeOpacity={0.85}
+                            >
+                                {isLoading
+                                    ? <ActivityIndicator color="#fff" size="small"/>
+                                    : <Text style={styles.submitBtnText}>{t('auth.forgotScreen.submit')}</Text>
+                                }
+                            </TouchableOpacity>
 
-                                <Text style={styles.spamNote}>{t('auth.forgotScreen.spamNote')}</Text>
+                            <Text style={styles.spamNote}>{t('auth.forgotScreen.spamNote')}</Text>
 
-                                <View style={styles.divider}/>
+                            <View style={styles.divider}/>
 
-                                <TouchableOpacity
-                                    style={styles.backToLoginInline}
-                                    onPress={() => navigation.goBack()}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.backToLoginInlineText}>{t('auth.forgotScreen.backToLogin')}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </Pressable>
-                </Animated.View>
-            </ImageBackground>
+                            <TouchableOpacity
+                                style={styles.backToLoginInline}
+                                onPress={() => navigation.goBack()}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.backToLoginInlineText}>{t('auth.forgotScreen.backToLogin')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </Pressable>
+            </Animated.View>
+        </ImageBackground>
     )
 }
 
