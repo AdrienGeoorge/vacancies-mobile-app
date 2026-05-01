@@ -23,9 +23,10 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack'
 import {TripStackParamList} from '../../types/navigation'
 import {useAuthStore} from '../../stores/authStore'
 import {useTripStore} from '../../stores/tripStore'
-import {TripListItem, TripState, getTripStateFromInt} from '../../types'
+import {TripListItem, getTripStateFromInt} from '../../types'
 import {BASE_URL, BORDER_RADIUS, COLORS, FONTS, SPACING, fs} from '../../constants'
-import {PlusIcon, GlobeIcon, CalendarIcon} from "../../utils/icons.tsx"
+import {MapPinIcon, PlusIcon} from '../../utils/icons.tsx'
+import LinearGradient from 'react-native-linear-gradient'
 
 type Props = {
     navigation: NativeStackNavigationProp<TripStackParamList, 'TripsList'>
@@ -40,30 +41,51 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     {key: 'past', label: 'Passés'},
 ]
 
-const STATE_CONFIG: Record<TripState, { label: string; bg: string; color: string }> = {
-    ongoing: {label: 'En cours', bg: '#f1f5f9', color: '#334155'},
-    upcoming: {label: 'À venir', bg: '#ccfbf1', color: '#0f766e'},
-    unplanned: {label: 'Non planifié', bg: '#fef9c3', color: '#854d0e'},
-    past: {label: 'Passé', bg: '#ffe4e6', color: '#be123c'},
+const PLACEHOLDER_GRADIENTS: [string, string][] = [
+    ['#c2783a', '#5a2a0a'],
+    ['#8e4a8a', '#3a1040'],
+    ['#3a6ec2', '#0e2060'],
+    ['#2aaa6a', '#0a4025'],
+    ['#c23a4a', '#5a0a18'],
+]
+
+const daysUntil = (dateStr: string | null): number | null => {
+    if (!dateStr) return null
+    const diff = new Date(dateStr).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)
+    return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
-const EmptyState = () => {
-    return (
-        <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>🗺️</Text>
-            <Text style={styles.emptyTitle}>Aucun voyage</Text>
-            <Text style={styles.emptySubtitle}>Commence par créer ton premier voyage !</Text>
-        </View>
-    )
+const formatCompactDate = (d: string, withYear: boolean) =>
+    new Date(d).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short', ...(withYear ? {year: 'numeric'} : {})})
+
+const formatDateLabel = (dep: string | null, ret: string | null): string => {
+    if (!dep) return 'Dates non définies'
+    if (!ret) return formatCompactDate(dep, true)
+    const depYear = new Date(dep).getFullYear()
+    const retYear = new Date(ret).getFullYear()
+    if (depYear === retYear) {
+        return `${formatCompactDate(dep, false)} — ${formatCompactDate(ret, true)}`
+    }
+    return `${formatCompactDate(dep, true)} — ${formatCompactDate(ret, true)}`
 }
 
-const TripCard = ({trip, onPress}: { trip: TripListItem; onPress: () => void }) => {
-    const {i18n} = useTranslation()
+const dayOfTrip = (departureDate: string | null, returnDate: string | null): {
+    current: number;
+    total: number
+} | null => {
+    if (!departureDate || !returnDate) return null
+    const dep = new Date(departureDate).setHours(0, 0, 0, 0)
+    const ret = new Date(returnDate).setHours(0, 0, 0, 0)
+    const now = new Date().setHours(0, 0, 0, 0)
+    const total = Math.round((ret - dep) / (1000 * 60 * 60 * 24))
+    const current = Math.min(Math.ceil((now - dep) / (1000 * 60 * 60 * 24)) + 1, total)
+    return {current: Math.max(current, 1), total}
+}
+
+const FeaturedTripCard = ({trip, onPress, lang}: { trip: TripListItem; onPress: () => void; lang: string }) => {
     const state = getTripStateFromInt(trip.state)
-    const config = STATE_CONFIG[state]
     const imageUri = trip.image ? `${BASE_URL}${trip.image}` : null
 
-    const lang = i18n.language.split('-')[0]
     const countryNames = trip.countryCodes.map(code => countries.getName(code, lang) ?? code)
     const countryLabel = countryNames.length === 0
         ? null
@@ -71,68 +93,150 @@ const TripCard = ({trip, onPress}: { trip: TripListItem; onPress: () => void }) 
             ? countryNames[0]
             : countryNames.slice(0, -1).join(', ') + ' et ' + countryNames[countryNames.length - 1]
 
-    const formatDate = (d: string | null) => {
-        if (!d) return null
-        return new Date(d).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short', year: 'numeric'})
-    }
+    const dateLabel = formatDateLabel(trip.departureDate, trip.returnDate)
 
-    const dateLabel = trip.departureDate
-        ? trip.returnDate
-            ? `${formatDate(trip.departureDate)} → ${formatDate(trip.returnDate)}`
-            : `Départ ${formatDate(trip.departureDate)}`
-        : null
+    const dayInfo = state === 'ongoing' ? dayOfTrip(trip.departureDate, trip.returnDate) : null
+    const daysAgo = state === 'past' ? Math.abs(daysUntil(trip.returnDate) ?? 0) : null
+    const daysLeft = state === 'upcoming' ? daysUntil(trip.departureDate) : null
+
+    const badgeLabel = state === 'ongoing'
+        ? dayInfo ? `EN COURS · JOUR ${dayInfo.current} / ${dayInfo.total}` : 'EN COURS'
+        : state === 'upcoming'
+            ? daysLeft !== null ? `À VENIR · DANS ${daysLeft} JOUR${daysLeft > 1 ? 'S' : ''}` : 'À VENIR'
+            : state === 'past'
+                ? daysAgo !== null ? `PASSÉ · IL Y A ${daysAgo} JOUR${daysAgo > 1 ? 'S' : ''}` : 'PASSÉ'
+                : 'NON PLANIFIÉ'
 
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
-            <View style={styles.cardImageContainer}>
-                {imageUri ? (
-                    <Image source={{uri: imageUri}} style={styles.cardImage} resizeMode="cover"/>
-                ) : (
-                    <View style={styles.cardImagePlaceholder}>
-                        <Text style={styles.cardImagePlaceholderEmoji}>🏔️</Text>
+        <TouchableOpacity style={s.featured} onPress={onPress} activeOpacity={0.88}>
+            <View style={s.featuredDark}>
+                {imageUri && <Image source={{uri: imageUri}} style={s.featuredBg} resizeMode="cover"/>}
+                <View style={s.featuredOverlay}/>
+                <View style={s.featuredInner}>
+                    <View style={s.featuredBadge}>
+                        <Text style={s.featuredBadgeText}>{badgeLabel}</Text>
                     </View>
-                )}
-                <View style={[styles.stateBadge, {backgroundColor: config.bg}]}>
-                    <Text style={[styles.stateBadgeText, {color: config.color}]}>{config.label}</Text>
+                    <View style={s.featuredBody}>
+                        <Text style={s.featuredMonthYear}>{dateLabel}</Text>
+                        <Text style={s.featuredName}>{trip.name}</Text>
+                    </View>
                 </View>
             </View>
 
-            <View style={styles.cardContent}>
-                <Text style={styles.cardName} numberOfLines={1}>{trip.name}</Text>
-
+            <View style={s.featuredWhiteBar}>
                 {countryLabel && (
-                    <View style={styles.cardMeta}>
-                        <GlobeIcon/>
-                        <Text style={styles.cardMetaText} numberOfLines={1}>{countryLabel}</Text>
+                    <View style={s.featuredMeta}>
+                        <MapPinIcon/>
+                        <Text style={s.featuredWhiteBarText} numberOfLines={1}>{countryLabel}</Text>
                     </View>
                 )}
-
-                {dateLabel && (
-                    <View style={styles.cardMeta}>
-                        <CalendarIcon/>
-                        <Text style={styles.cardMetaText}>{dateLabel}</Text>
-                    </View>
-                )}
-
-                {trip.description ? (
-                    <Text style={styles.cardDescription} numberOfLines={2}>{trip.description}</Text>
-                ) : null}
             </View>
         </TouchableOpacity>
     )
 }
 
+const CompactTripCard = ({trip, onPress, lang}: { trip: TripListItem; onPress: () => void; lang: string }) => {
+    const state = getTripStateFromInt(trip.state)
+    const imageUri = trip.image ? `${BASE_URL}${trip.image}` : null
+    const placeholderGradient = PLACEHOLDER_GRADIENTS[trip.id % PLACEHOLDER_GRADIENTS.length]
+
+    const countryNames = trip.countryCodes.map(code => countries.getName(code, lang) ?? code)
+    const countryLabel = countryNames.length === 0
+        ? null
+        : countryNames.length === 1
+            ? countryNames[0]
+            : countryNames.slice(0, -1).join(', ') + ' et ' + countryNames[countryNames.length - 1]
+
+    const dateLabel = formatDateLabel(trip.departureDate, trip.returnDate)
+
+    const dayInfo = state === 'ongoing' ? dayOfTrip(trip.departureDate, trip.returnDate) : null
+    const rightLabel = state === 'past'
+        ? 'Terminé'
+        : state === 'ongoing'
+            ? dayInfo ? `Jour ${dayInfo.current} / ${dayInfo.total}` : null
+            : state === 'upcoming'
+                ? (() => {
+                    const d = daysUntil(trip.departureDate);
+                    return d !== null ? `Dans ${d} jour${d > 1 ? 's' : ''}` : null
+                })()
+                : null
+
+    const badgeConfig = state === 'ongoing'
+        ? {label: 'EN COURS', bg: '#F1F5F9', color: '#4B5669'}
+        : state === 'upcoming'
+            ? {label: 'À VENIR', bg: '#E9F4F2', color: '#0f766e'}
+            : state === 'unplanned'
+                ? {label: 'NON PLANIFIÉ', bg: '#fbf3ca', color: '#76680f'}
+                : {label: 'PASSÉ', bg: '#f4e9e9', color: '#760f0f'}
+
+    return (
+        <TouchableOpacity style={s.compact} onPress={onPress} activeOpacity={0.88}>
+            <View style={s.compactThumb}>
+                {imageUri ? (
+                    <Image source={{uri: imageUri}} style={s.compactThumbImg} resizeMode="cover"/>
+                ) : (
+                    <LinearGradient
+                        colors={placeholderGradient}
+                        start={{x: 0.5, y: 0}}
+                        end={{x: 0.5, y: 1}}
+                        style={s.compactThumbImg}
+                    />
+                )}
+            </View>
+
+            <View style={s.compactContent}>
+                <View style={s.compactContentTop}>
+                    <Text style={s.compactName} numberOfLines={1}>{trip.name}</Text>
+                    {countryLabel ? <Text style={s.compactMeta} numberOfLines={1}>{countryLabel}</Text> : null}
+                    {dateLabel ? <Text style={s.compactMeta} numberOfLines={1}>{dateLabel}</Text> : null}
+                </View>
+                {trip.description && (
+                    <Text numberOfLines={2} style={s.compactDescription}>{trip.description}</Text>
+                )}
+                <View style={s.compactFooter}>
+                    <View style={[s.compactBadge, {backgroundColor: badgeConfig.bg}]}>
+                        <Text style={[s.compactBadgeText, {color: badgeConfig.color}]}>{badgeConfig.label}</Text>
+                    </View>
+                    {rightLabel && <Text style={s.compactRight}>{rightLabel}</Text>}
+                </View>
+            </View>
+        </TouchableOpacity>
+    )
+}
+
+const TripCard = ({trip, onPress, lang, featured}: {
+    trip: TripListItem;
+    onPress: () => void;
+    lang: string;
+    featured: boolean
+}) => {
+    if (featured) {
+        return <FeaturedTripCard trip={trip} onPress={onPress} lang={lang}/>
+    }
+    return <CompactTripCard trip={trip} onPress={onPress} lang={lang}/>
+}
+
+const EmptyState = () => (
+    <View style={s.emptyContainer}>
+        <Text style={s.emptyEmoji}>🗺️</Text>
+        <Text style={s.emptyTitle}>Aucun voyage</Text>
+        <Text style={s.emptySubtitle}>Commence par créer ton premier voyage !</Text>
+    </View>
+)
+
 export default function TripsListScreen({navigation}: Props) {
     const insets = useSafeAreaInsets()
-    const userId = useAuthStore(state => state.user?.id)
+    const {i18n} = useTranslation()
+    const lang = i18n.language.split('-')[0]
+    const user = useAuthStore(state => state.user)
     const {trips, isLoadingList, listError} = useTripStore()
     const [filter, setFilter] = useState<FilterKey>('all')
     const [refreshing, setRefreshing] = useState(false)
 
     useEffect(() => {
-        if (!userId) return
-        useTripStore.getState().fetchTrips(userId)
-    }, [userId])
+        if (!user?.id) return
+        useTripStore.getState().fetchTrips(user.id)
+    }, [user])
 
     useFocusEffect(useCallback(() => {
         const uid = useAuthStore.getState().user?.id
@@ -140,11 +244,11 @@ export default function TripsListScreen({navigation}: Props) {
     }, []))
 
     const onRefresh = useCallback(async () => {
-        if (!userId) return
+        if (!user?.id) return
         setRefreshing(true)
-        await useTripStore.getState().fetchTrips(userId)
+        await useTripStore.getState().fetchTrips(user.id)
         setRefreshing(false)
-    }, [userId])
+    }, [user])
 
     const filtered = trips.filter(trip => {
         if (filter === 'all') return true
@@ -156,11 +260,14 @@ export default function TripsListScreen({navigation}: Props) {
     })
 
     return (
-        <View style={[styles.root, {paddingTop: insets.top}]}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Mes voyages</Text>
+        <View style={[s.root, {paddingTop: insets.top}]}>
+            <View style={s.header}>
+                <View>
+                    <Text style={s.nameTitle}>Bonjour {user?.firstname ?? ''}</Text>
+                    <Text style={s.headerTitle}>Mes voyages</Text>
+                </View>
                 <TouchableOpacity
-                    style={styles.addBtn}
+                    style={s.addBtn}
                     onPress={() => navigation.navigate('CreateEditTrip', {})}
                     activeOpacity={0.85}
                 >
@@ -168,14 +275,14 @@ export default function TripsListScreen({navigation}: Props) {
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.filtersRow}>
+            <View style={s.filtersRow}>
                 {FILTERS.map(f => (
                     <Pressable
                         key={f.key}
-                        style={[styles.filterPill, filter === f.key && styles.filterPillActive]}
+                        style={[s.filterPill, filter === f.key && s.filterPillActive]}
                         onPress={() => setFilter(f.key)}
                     >
-                        <Text style={[styles.filterPillText, filter === f.key && styles.filterPillTextActive]}>
+                        <Text style={[s.filterPillText, filter === f.key && s.filterPillTextActive]}>
                             {f.label}
                         </Text>
                     </Pressable>
@@ -183,31 +290,33 @@ export default function TripsListScreen({navigation}: Props) {
             </View>
 
             {listError ? (
-                <View style={styles.loaderContainer}>
-                    <Text style={styles.errorText}>{listError}</Text>
-                    <TouchableOpacity style={styles.retryBtn}
-                                      onPress={() => userId && useTripStore.getState().fetchTrips(userId)}>
-                        <Text style={styles.retryBtnText}>Réessayer</Text>
+                <View style={s.loaderContainer}>
+                    <Text style={s.errorText}>{listError}</Text>
+                    <TouchableOpacity style={s.retryBtn}
+                                      onPress={() => user?.id && useTripStore.getState().fetchTrips(user.id)}>
+                        <Text style={s.retryBtnText}>Réessayer</Text>
                     </TouchableOpacity>
                 </View>
             ) : isLoadingList && trips.length === 0 ? (
-                <View style={styles.loaderContainer}>
+                <View style={s.loaderContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary}/>
                 </View>
             ) : (
                 <FlatList
                     data={filtered}
                     keyExtractor={item => String(item.id)}
-                    renderItem={({item}) => (
+                    renderItem={({item, index}) => (
                         <TripCard
                             trip={item}
+                            lang={lang}
+                            featured={filter === 'all' && index === 0}
                             onPress={() => navigation.navigate('TripDetail', {tripId: item.id})}
                         />
                     )}
                     ListEmptyComponent={<EmptyState/>}
                     contentContainerStyle={[
-                        styles.listContent,
-                        filtered.length === 0 && styles.listContentEmpty,
+                        s.listContent,
+                        filtered.length === 0 && s.listContentEmpty,
                     ]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
@@ -223,7 +332,7 @@ export default function TripsListScreen({navigation}: Props) {
     )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
     root: {flex: 1, backgroundColor: '#f8fafc'},
 
     header: {
@@ -232,13 +341,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.md,
-        backgroundColor: '#f8fafc',
+    },
+    nameTitle: {
+        fontFamily: FONTS.regular,
+        fontSize: fs(14),
+        color: COLORS.textSecondary,
     },
     headerTitle: {
-        fontFamily: FONTS.display,
+        fontFamily: FONTS.semiBold,
         fontSize: fs(26),
         color: COLORS.text,
-        letterSpacing: -0.5,
+        letterSpacing: -1,
     },
     addBtn: {
         width: 40,
@@ -253,8 +366,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingHorizontal: SPACING.lg,
         paddingBottom: SPACING.sm,
-        gap: SPACING.xs,
-        marginBottom: SPACING.md,
+        gap: SPACING.base,
+        marginBottom: SPACING.sm,
     },
     filterPill: {
         paddingHorizontal: SPACING.md,
@@ -273,83 +386,164 @@ const styles = StyleSheet.create({
         fontSize: fs(13),
         color: COLORS.textSecondary,
     },
-    filterPillTextActive: {
-        color: '#fff',
-    },
+    filterPillTextActive: {color: '#fff'},
 
     loaderContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-
-    listContent: {paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl, gap: SPACING.md},
+    listContent: {paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl},
     listContentEmpty: {flex: 1},
 
-    card: {
+    featured: {
+        borderRadius: BORDER_RADIUS.xl,
+        overflow: 'hidden',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        marginBottom: SPACING.md,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    featuredDark: {
+        height: 170,
+        backgroundColor: '#0d1f30',
+        position: 'relative',
+    },
+    featuredBg: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+    },
+    featuredOverlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(10,25,45,0.72)',
+    },
+    featuredInner: {
+        flex: 1,
+        padding: SPACING.md,
+        justifyContent: 'space-between',
+    },
+    featuredBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: BORDER_RADIUS.full,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.25)',
+    },
+    featuredBadgeText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(11),
+        color: '#fff',
+        letterSpacing: 0.5,
+    },
+    featuredBody: {gap: 4},
+    featuredMonthYear: {
+        fontFamily: FONTS.medium,
+        fontSize: fs(12),
+        color: 'rgba(255,255,255,0.6)',
+    },
+    featuredName: {
+        fontFamily: FONTS.display,
+        fontSize: fs(24),
+        color: '#fff',
+        letterSpacing: -0.5,
+        lineHeight: fs(29),
+    },
+    featuredWhiteBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.sm + 4,
+        gap: SPACING.xs,
+    },
+    featuredMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        flex: 1,
+    },
+    featuredWhiteBarText: {
+        fontFamily: FONTS.medium,
+        fontSize: fs(13),
+        color: COLORS.textSecondary,
+        flex: 1,
+    },
+
+    compact: {
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: BORDER_RADIUS.xl,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: COLORS.border,
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
+        marginBottom: SPACING.sm,
     },
-    cardImageContainer: {
-        height: 140,
-        position: 'relative',
+    compactThumb: {
+        width: 90,
+        alignSelf: 'stretch',
+        flexShrink: 0,
+        margin: SPACING.sm + 3,
+        borderRadius: BORDER_RADIUS.lg,
+        overflow: 'hidden',
+        flexDirection: 'column',
     },
-    cardImage: {
+    compactThumbImg: {
+        flex: 1,
         width: '100%',
-        height: '100%',
+        minHeight: 90,
     },
-    cardImagePlaceholder: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#e2e8f0',
-        alignItems: 'center',
-        justifyContent: 'center',
+    compactContent: {
+        flex: 1,
+        paddingLeft: SPACING.xs,
+        paddingRight: SPACING.md,
+        paddingVertical: SPACING.sm + 2,
+        gap: 3,
     },
-    cardImagePlaceholderEmoji: {fontSize: 40},
-    stateBadge: {
-        position: 'absolute',
-        top: SPACING.md,
-        right: SPACING.md,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.full,
-    },
-    stateBadgeText: {
-        fontFamily: FONTS.medium,
-        fontSize: fs(11),
-    },
-
-    cardContent: {
-        padding: SPACING.md,
-        gap: SPACING.xs,
-    },
-    cardName: {
+    compactContentTop: {flexDirection: 'column', gap: 0},
+    compactName: {
         fontFamily: FONTS.semiBold,
-        fontSize: fs(17),
+        fontSize: fs(15),
         color: COLORS.text,
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
     },
-    cardMeta: {
+    compactDescription: {
+        marginVertical: 10,
+        lineHeight: fs(13),
+    },
+    compactMeta: {
+        fontFamily: FONTS.regular,
+        fontSize: fs(12),
+        color: COLORS.textSecondary,
+    },
+    compactFooter: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
-    },
-    cardMetaText: {
-        fontFamily: FONTS.regular,
-        fontSize: fs(13),
-        color: COLORS.textSecondary,
-        flex: 1,
-    },
-    cardDescription: {
-        fontFamily: FONTS.regular,
-        fontSize: fs(13),
-        color: COLORS.textSecondary,
-        lineHeight: fs(17),
+        justifyContent: 'space-between',
         marginTop: 2,
+    },
+    compactBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: BORDER_RADIUS.sm,
+    },
+    compactBadgeText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(10),
+        letterSpacing: 0.3,
+    },
+    compactRight: {
+        fontFamily: FONTS.medium,
+        fontSize: fs(12),
+        color: COLORS.textSecondary,
     },
 
     errorText: {
@@ -357,13 +551,13 @@ const styles = StyleSheet.create({
         fontSize: fs(14),
         color: COLORS.danger,
         textAlign: 'center',
-        marginBottom: SPACING.md
+        marginBottom: SPACING.md,
     },
     retryBtn: {
         backgroundColor: COLORS.primary,
         paddingHorizontal: SPACING.lg,
         paddingVertical: 10,
-        borderRadius: BORDER_RADIUS.full
+        borderRadius: BORDER_RADIUS.full,
     },
     retryBtnText: {fontFamily: FONTS.medium, fontSize: fs(14), color: '#fff'},
 

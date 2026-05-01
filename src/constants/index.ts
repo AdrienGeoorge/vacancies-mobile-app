@@ -29,6 +29,7 @@ export const COLORS = {
 export const SPACING = {
     xxs: Math.round(2 * scale),
     xs: Math.round(4 * scale),
+    base: Math.round(6 * scale),
     sm: Math.round(8 * scale),
     md: Math.round(16 * scale),
     lg: Math.round(24 * scale),
