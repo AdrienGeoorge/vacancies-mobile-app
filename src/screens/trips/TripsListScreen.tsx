@@ -27,6 +27,7 @@ import {TripListItem, getTripStateFromInt} from '../../types'
 import {BASE_URL, BORDER_RADIUS, COLORS, FONTS, SPACING, fs} from '../../constants'
 import {MapPinIcon, PlusIcon} from '../../utils/icons.tsx'
 import LinearGradient from 'react-native-linear-gradient'
+import {TAB_BAR_HEIGHT} from '../../navigation/MainNavigator'
 
 type Props = {
     navigation: NativeStackNavigationProp<TripStackParamList, 'TripsList'>
@@ -36,8 +37,8 @@ type FilterKey = 'all' | 'upcoming' | 'ongoing' | 'past'
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     {key: 'all', label: 'Tous'},
-    {key: 'upcoming', label: 'À venir'},
     {key: 'ongoing', label: 'En cours'},
+    {key: 'upcoming', label: 'À venir'},
     {key: 'past', label: 'Passés'},
 ]
 
@@ -260,7 +261,8 @@ export default function TripsListScreen({navigation}: Props) {
     })
 
     return (
-        <View style={[s.root, {paddingTop: insets.top}]}>
+        <View style={s.fullScreen}>
+        <View style={[s.root, {paddingTop: insets.top, marginBottom: insets.bottom + TAB_BAR_HEIGHT - 30}]}>
             <View style={s.header}>
                 <View>
                     <Text style={s.nameTitle}>Bonjour {user?.firstname ?? ''}</Text>
@@ -317,6 +319,7 @@ export default function TripsListScreen({navigation}: Props) {
                     contentContainerStyle={[
                         s.listContent,
                         filtered.length === 0 && s.listContentEmpty,
+                        {paddingBottom: 25},
                     ]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
@@ -329,10 +332,12 @@ export default function TripsListScreen({navigation}: Props) {
                 />
             )}
         </View>
+        </View>
     )
 }
 
 const s = StyleSheet.create({
+    fullScreen: {flex: 1, backgroundColor: '#f8fafc'},
     root: {flex: 1, backgroundColor: '#f8fafc'},
 
     header: {
@@ -389,7 +394,7 @@ const s = StyleSheet.create({
     filterPillTextActive: {color: '#fff'},
 
     loaderContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-    listContent: {paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl},
+    listContent: {paddingHorizontal: SPACING.lg},
     listContentEmpty: {flex: 1},
 
     featured: {
