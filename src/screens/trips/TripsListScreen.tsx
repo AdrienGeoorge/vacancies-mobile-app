@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
 import countries from 'i18n-iso-countries'
 import countriesFr from 'i18n-iso-countries/langs/fr.json'
 import countriesEn from 'i18n-iso-countries/langs/en.json'
@@ -232,6 +232,7 @@ export default function TripsListScreen({navigation}: Props) {
     const user = useAuthStore(state => state.user)
     const {trips, isLoadingList, listError} = useTripStore()
     const [filter, setFilter] = useState<FilterKey>('all')
+    const flatListRef = useRef<FlatList>(null)
     const [refreshing, setRefreshing] = useState(false)
 
     useEffect(() => {
@@ -260,78 +261,97 @@ export default function TripsListScreen({navigation}: Props) {
         return true
     })
 
+    type ListItem = {type: 'filters'} | {type: 'empty'} | TripListItem
+    const listData: ListItem[] = [
+        {type: 'filters'},
+        ...(filtered.length > 0 ? filtered : [{type: 'empty' as const}]),
+    ]
+
+    const renderItem = ({item, index}: {item: ListItem; index: number}) => {
+        if ('type' in item) {
+            if (item.type === 'filters') {
+                return (
+                    <View style={s.filtersRowWrapper}>
+                        <View style={s.filtersRow}>
+                            {FILTERS.map(f => (
+                                <Pressable
+                                    key={f.key}
+                                    style={[s.filterPill, filter === f.key && s.filterPillActive]}
+                                    onPress={() => {
+                                        setFilter(f.key)
+                                        flatListRef.current?.scrollToOffset({offset: 0, animated: true})
+                                    }}
+                                >
+                                    <Text style={[s.filterPillText, filter === f.key && s.filterPillTextActive]}
+                                          numberOfLines={1}>
+                                        {f.label}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                )
+            }
+            return <EmptyState/>
+        }
+        return (
+            <TripCard
+                trip={item}
+                lang={lang}
+                featured={filter === 'all' && index === 1}
+                onPress={() => navigation.navigate('TripDetail', {tripId: (item as TripListItem).id})}
+            />
+        )
+    }
+
     return (
         <View style={s.fullScreen}>
-        <View style={[s.root, {paddingTop: insets.top, marginBottom: insets.bottom + TAB_BAR_HEIGHT - 30}]}>
-            <View style={s.header}>
-                <View>
-                    <Text style={s.nameTitle}>Bonjour {user?.firstname ?? ''}</Text>
-                    <Text style={s.headerTitle}>Mes voyages</Text>
-                </View>
-                <TouchableOpacity
-                    style={s.addBtn}
-                    onPress={() => navigation.navigate('CreateEditTrip', {})}
-                    activeOpacity={0.85}
-                >
-                    <PlusIcon/>
-                </TouchableOpacity>
-            </View>
-
-            <View style={s.filtersRow}>
-                {FILTERS.map(f => (
-                    <Pressable
-                        key={f.key}
-                        style={[s.filterPill, filter === f.key && s.filterPillActive]}
-                        onPress={() => setFilter(f.key)}
+            <View style={[s.root, {paddingTop: insets.top, marginBottom: insets.bottom + TAB_BAR_HEIGHT - 30}]}>
+                <View style={s.header}>
+                    <View>
+                        <Text style={s.nameTitle}>Bonjour {user?.firstname ?? ''}</Text>
+                        <Text style={s.headerTitle}>Mes voyages</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={s.addBtn}
+                        onPress={() => navigation.navigate('CreateEditTrip', {})}
+                        activeOpacity={0.85}
                     >
-                        <Text style={[s.filterPillText, filter === f.key && s.filterPillTextActive]}>
-                            {f.label}
-                        </Text>
-                    </Pressable>
-                ))}
-            </View>
-
-            {listError ? (
-                <View style={s.loaderContainer}>
-                    <Text style={s.errorText}>{listError}</Text>
-                    <TouchableOpacity style={s.retryBtn}
-                                      onPress={() => user?.id && useTripStore.getState().fetchTrips(user.id)}>
-                        <Text style={s.retryBtnText}>Réessayer</Text>
+                        <PlusIcon/>
                     </TouchableOpacity>
                 </View>
-            ) : isLoadingList && trips.length === 0 ? (
-                <View style={s.loaderContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary}/>
-                </View>
-            ) : (
-                <FlatList
-                    data={filtered}
-                    keyExtractor={item => String(item.id)}
-                    renderItem={({item, index}) => (
-                        <TripCard
-                            trip={item}
-                            lang={lang}
-                            featured={filter === 'all' && index === 0}
-                            onPress={() => navigation.navigate('TripDetail', {tripId: item.id})}
-                        />
-                    )}
-                    ListEmptyComponent={<EmptyState/>}
-                    contentContainerStyle={[
-                        s.listContent,
-                        filtered.length === 0 && s.listContentEmpty,
-                        {paddingBottom: 25},
-                    ]}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor={COLORS.primary}
-                        />
-                    }
-                />
-            )}
-        </View>
+
+                {listError ? (
+                    <View style={s.loaderContainer}>
+                        <Text style={s.errorText}>{listError}</Text>
+                        <TouchableOpacity style={s.retryBtn}
+                                          onPress={() => user?.id && useTripStore.getState().fetchTrips(user.id)}>
+                            <Text style={s.retryBtnText}>Réessayer</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : isLoadingList && trips.length === 0 ? (
+                    <View style={s.loaderContainer}>
+                        <ActivityIndicator size="large" color={COLORS.primary}/>
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={listData}
+                        stickyHeaderIndices={[0]}
+                        keyExtractor={item => 'type' in item ? item.type : String((item as TripListItem).id)}
+                        renderItem={renderItem}
+                        contentContainerStyle={[s.listContent, s.listContentPadding]}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor={COLORS.primary}
+                            />
+                        }
+                    />
+                )}
+            </View>
         </View>
     )
 }
@@ -345,7 +365,8 @@ const s = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingTop: SPACING.md,
+        paddingBottom: SPACING.sm,
     },
     nameTitle: {
         fontFamily: FONTS.regular,
@@ -366,15 +387,25 @@ const s = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
+    filtersRowWrapper: {
+        backgroundColor: '#f8fafc',
+        paddingTop: SPACING.sm,
+        borderBottomLeftRadius: BORDER_RADIUS.xl + 16,
+        borderBottomRightRadius: BORDER_RADIUS.xl + 16,
+        marginBottom: SPACING.md
+    },
     filtersRow: {
+        backgroundColor: '#fff',
         flexDirection: 'row',
-        paddingHorizontal: SPACING.lg,
-        paddingBottom: SPACING.sm,
+        padding: SPACING.sm,
         gap: SPACING.base,
-        marginBottom: SPACING.sm,
+        borderRadius: BORDER_RADIUS.xl,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        marginHorizontal: SPACING.sm + 2,
     },
     filterPill: {
+        flex: 1,
         paddingHorizontal: SPACING.md,
         paddingVertical: 6,
         borderRadius: BORDER_RADIUS.full,
@@ -394,8 +425,8 @@ const s = StyleSheet.create({
     filterPillTextActive: {color: '#fff'},
 
     loaderContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-    listContent: {paddingHorizontal: SPACING.lg},
-    listContentEmpty: {flex: 1},
+    listContent: {paddingHorizontal: SPACING.sm},
+    listContentPadding: {paddingBottom: 25},
 
     featured: {
         borderRadius: BORDER_RADIUS.xl,
@@ -409,6 +440,7 @@ const s = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 4,
         elevation: 1,
+        marginHorizontal: SPACING.md,
     },
     featuredDark: {
         height: 170,
@@ -491,6 +523,7 @@ const s = StyleSheet.create({
         shadowRadius: 4,
         elevation: 1,
         marginBottom: SPACING.sm,
+        marginHorizontal: SPACING.md,
     },
     compactThumb: {
         width: 90,
