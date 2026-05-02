@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { TripListItem, TripGeneralData, TripDashboard, TripForecastBudget } from '../types'
+import { TripListItem, TripGeneralData, TripDashboard, TripForecastBudget, TripWeather } from '../types'
 import { tripsApi } from '../api/trips'
 
 interface TripStore {
@@ -13,8 +13,12 @@ interface TripStore {
   isLoadingDetail: boolean
   detailError: string | null
 
+  weather: TripWeather | null
+  isLoadingWeather: boolean
+
   fetchTrips: (userId: number) => Promise<void>
   fetchTripDetail: (tripId: number) => Promise<void>
+  fetchWeather: (tripId: number) => Promise<void>
   saveForecastBudget: (tripId: number, forecast: TripForecastBudget) => Promise<void>
   clearCurrentTrip: () => void
 }
@@ -29,6 +33,9 @@ export const useTripStore = create<TripStore>((set) => ({
   forecastBudget: null,
   isLoadingDetail: false,
   detailError: null,
+
+  weather: null,
+  isLoadingWeather: false,
 
   fetchTrips: async (userId) => {
     set({ isLoadingList: true, listError: null })
@@ -60,10 +67,22 @@ export const useTripStore = create<TripStore>((set) => ({
     }
   },
 
+  fetchWeather: async (tripId) => {
+    set({ isLoadingWeather: true })
+    try {
+      const weather = await tripsApi.getWeather(tripId)
+      set({ weather })
+    } catch {
+      set({ weather: null })
+    } finally {
+      set({ isLoadingWeather: false })
+    }
+  },
+
   saveForecastBudget: async (tripId, forecast) => {
     await tripsApi.saveBudgetForecast(tripId, forecast)
     set({ forecastBudget: forecast })
   },
 
-  clearCurrentTrip: () => set({ currentTrip: null, currentDashboard: null, forecastBudget: null }),
+  clearCurrentTrip: () => set({ currentTrip: null, currentDashboard: null, forecastBudget: null, weather: null }),
 }))

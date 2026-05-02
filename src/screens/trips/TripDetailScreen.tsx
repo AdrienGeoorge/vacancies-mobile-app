@@ -19,6 +19,7 @@ import {BudgetCategoryKey, ChecklistItem, TripBudget, TripDestination} from '../
 import {BASE_URL, BORDER_RADIUS, COLORS, FONTS, SPACING, fs} from '../../constants'
 import {BackArrow} from "../../utils/icons.tsx"
 import {TAB_BAR_HEIGHT} from '../../navigation/MainNavigator'
+import WeatherSection from './WeatherSection'
 
 type Props = {
     navigation: NativeStackNavigationProp<TripStackParamList, 'TripDetail'>
@@ -27,12 +28,13 @@ type Props = {
 
 const HEADER_HEIGHT = fs(255)
 
-type SectionKey = 'overview' | 'organisation' | 'media' | 'checklist'
+type SectionKey = 'overview' | 'organisation' | 'documents' | 'media' | 'checklist'
 
 const SECTIONS: { key: SectionKey; label: string }[] = [
     {key: 'overview', label: 'Tableau de bord'},
     {key: 'organisation', label: 'Organisation'},
-    {key: 'media', label: 'Documents'},
+    {key: 'documents', label: 'Documents'},
+    {key: 'media', label: 'Photos et partage'},
     {key: 'checklist', label: 'Checklist'},
 ]
 
@@ -313,11 +315,19 @@ const PracticalInfoSection = ({destinations}: { destinations: TripDestination[] 
     const valid = destinations.filter(d => d.country && (d.country.timezone || d.country.plugTypes))
     const [activeIdx, setActiveIdx] = useState(0)
     const [now, setNow] = useState(new Date())
+    const [tabContainerWidth, setTabContainerWidth] = useState(0)
+    const [tabContentWidth, setTabContentWidth] = useState(0)
+    const tabNaturalMeasured = useRef(false)
 
     useEffect(() => {
         const id = setInterval(() => setNow(new Date()), 30000)
         return () => clearInterval(id)
     }, [])
+
+    useEffect(() => {
+        tabNaturalMeasured.current = false
+        setTabContentWidth(0)
+    }, [valid.length])
 
     if (valid.length === 0) return null
 
@@ -346,32 +356,43 @@ const PracticalInfoSection = ({destinations}: { destinations: TripDestination[] 
         <View style={spi.card}>
             <View style={spi.cardHeader}>
                 <Text style={spi.cardTitle}>Informations pratiques</Text>
-                {valid.length > 1 && (
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={spi.tabs}
-                    >
-                        {valid.map((d, i) => (
-                            <TouchableOpacity
-                                key={d.id}
-                                style={[spi.tab, activeIdx === i && spi.tabActive]}
-                                onPress={() => setActiveIdx(i)}
-                                activeOpacity={0.7}
+                {valid.length > 1 && (() => {
+                    const overflows = tabContentWidth > tabContainerWidth && tabContainerWidth > 0
+                    return (
+                        <View onLayout={(e) => setTabContainerWidth(e.nativeEvent.layout.width)}>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={overflows ? spi.tabs : spi.tabsFull}
+                                scrollEnabled={overflows}
+                                onContentSizeChange={(w) => {
+                                    if (!tabNaturalMeasured.current) {
+                                        tabNaturalMeasured.current = true
+                                        setTabContentWidth(w)
+                                    }
+                                }}
                             >
-                                <Text style={[spi.tabText, activeIdx === i && spi.tabTextActive]}>
-                                    {d.country!.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                )}
+                                {valid.map((d, i) => (
+                                    <TouchableOpacity
+                                        key={d.id}
+                                        style={[spi.tab, !overflows && spi.tabFlex, activeIdx === i && spi.tabActive]}
+                                        onPress={() => setActiveIdx(i)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[spi.tabText, activeIdx === i && spi.tabTextActive]}>
+                                            {d.country!.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )
+                })()}
             </View>
 
             {ianaList.length > 0 && (
                 <>
-                    <View style={spi.sep}/>
-                    <View style={spi.tzBlock}>
+                    <View style={[spi.tzBlock, {marginTop: -SPACING.sm}]}>
                         <Text style={spi.tzSectionLabel}>Heure locale</Text>
 
                         {/* Un seul timezone */}
@@ -456,17 +477,19 @@ const PracticalInfoSection = ({destinations}: { destinations: TripDestination[] 
                             contentContainerStyle={spi.plugScroll}
                         >
                             {plugTypes.map(type => (
-                                <View key={type} style={spi.plugCard}>
-                                    {PLUG_IMAGES[type.toUpperCase()] ? (
-                                        <Image
-                                            source={PLUG_IMAGES[type.toUpperCase()]}
-                                            style={spi.plugImage}
-                                            resizeMode="contain"
-                                        />
-                                    ) : (
-                                        <Text style={spi.plugLetter}>{type}</Text>
-                                    )}
-                                    <Text style={spi.plugTypeLabel}>Type {type}</Text>
+                                <View key={type} style={spi.plugTile}>
+                                    <View style={spi.plugImgWrap}>
+                                        {PLUG_IMAGES[type.toUpperCase()] ? (
+                                            <Image
+                                                source={PLUG_IMAGES[type.toUpperCase()]}
+                                                style={spi.plugImage}
+                                                resizeMode="contain"
+                                            />
+                                        ) : (
+                                            <Text style={spi.plugFallbackLetter}>{type}</Text>
+                                        )}
+                                    </View>
+                                    <Text style={spi.plugTileLabel}>Type {type}</Text>
                                 </View>
                             ))}
                         </ScrollView>
@@ -477,12 +500,33 @@ const PracticalInfoSection = ({destinations}: { destinations: TripDestination[] 
     )
 }
 
-const MediaSection = ({blocNotes}: { blocNotes: string | null }) => (
+const DocumentsSection = ({blocNotes}: { blocNotes: string | null }) => (
+    <View style={sm.container}>
+        {[
+            {label: 'Documents', emoji: '📄', content: null},
+            {label: 'Bloc-notes', emoji: '📝', content: blocNotes},
+        ].map(item => (
+            <View key={item.label} style={sm.block}>
+                <View style={sm.blockHeader}>
+                    <Text style={sm.blockEmoji}>{item.emoji}</Text>
+                    <Text style={sm.blockLabel}>{item.label}</Text>
+                </View>
+                {item.content ? (
+                    <Text style={sm.blockContent}>{item.content}</Text>
+                ) : (
+                    <View style={sm.blockEmpty}>
+                        <Text style={sm.blockEmptyText}>Bientôt disponible</Text>
+                    </View>
+                )}
+            </View>
+        ))}
+    </View>
+)
+
+const MediaSection = () => (
     <View style={sm.container}>
         {[
             {label: 'Photos', emoji: '📷', content: null},
-            {label: 'Documents', emoji: '📄', content: null},
-            {label: 'Bloc-notes', emoji: '📝', content: blocNotes},
             {label: 'Stories & partage', emoji: '✨', content: null},
         ].map(item => (
             <View key={item.label} style={sm.block}>
@@ -559,7 +603,10 @@ export default function TripDetailScreen({navigation, route}: Props) {
         currentDashboard,
         isLoadingDetail,
         fetchTripDetail,
-        clearCurrentTrip
+        clearCurrentTrip,
+        weather,
+        isLoadingWeather,
+        fetchWeather,
     } = useTripStore()
     const [activeSection, setActiveSection] = useState<SectionKey>('overview')
     const [stickyTabVisible, setStickyTabVisible] = useState(false)
@@ -567,10 +614,10 @@ export default function TripDetailScreen({navigation, route}: Props) {
     const sectionsScrollRef = useRef<ScrollView>(null)
     const scrollY = useRef(new Animated.Value(0)).current
 
-    const TABS_THRESHOLD = HEADER_HEIGHT + 80
+    const TABS_THRESHOLD = HEADER_HEIGHT - 120
 
     const navBarOpacity = scrollY.interpolate({
-        inputRange: [HEADER_HEIGHT - 100, HEADER_HEIGHT - 30],
+        inputRange: [HEADER_HEIGHT - 180, HEADER_HEIGHT - 110],
         outputRange: [0, 1],
         extrapolate: 'clamp',
     })
@@ -594,8 +641,9 @@ export default function TripDetailScreen({navigation, route}: Props) {
 
     useEffect(() => {
         fetchTripDetail(tripId)
+        fetchWeather(tripId)
         return () => clearCurrentTrip()
-    }, [clearCurrentTrip, fetchTripDetail, tripId])
+    }, [clearCurrentTrip, fetchTripDetail, fetchWeather, tripId])
 
     if (isLoadingDetail || !currentTrip) {
         return (
@@ -651,6 +699,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={s.tabsContent}
+                    style={{marginHorizontal: SPACING.sm, marginBottom: SPACING.sm}}
                 >
                     {SECTIONS.map(sec => (
                         <TouchableOpacity
@@ -803,14 +852,9 @@ export default function TripDetailScreen({navigation, route}: Props) {
                                 </View>
                             )}
 
-                            <PracticalInfoSection destinations={trip.destinations ?? []}/>
+                            <WeatherSection weather={weather} isLoading={isLoadingWeather}/>
 
-                            <View style={s.infoCard2}>
-                                <Text style={s.infoCard2Title}>🌤 Météo</Text>
-                                <View style={s.infoCard2Empty}>
-                                    <Text style={s.infoCard2EmptyText}>Bientôt disponible</Text>
-                                </View>
-                            </View>
+                            <PracticalInfoSection destinations={trip.destinations ?? []}/>
                         </>
                     )}
 
@@ -818,8 +862,12 @@ export default function TripDetailScreen({navigation, route}: Props) {
                         <OrganisationSection trip={trip} budget={budget} symbol={symbol}/>
                     )}
 
+                    {activeSection === 'documents' && (
+                        <DocumentsSection blocNotes={trip.blocNotes ?? null}/>
+                    )}
+
                     {activeSection === 'media' && (
-                        <MediaSection blocNotes={trip.blocNotes ?? null}/>
+                        <MediaSection/>
                     )}
 
                     {activeSection === 'checklist' && (
@@ -1175,18 +1223,21 @@ const spi = StyleSheet.create({
     },
 
     tabs: {gap: SPACING.xs, paddingBottom: 2},
+    tabsFull: {flexGrow: 1, gap: SPACING.xs, paddingBottom: 2},
     tab: {
         paddingHorizontal: SPACING.md,
         paddingVertical: 6,
         borderRadius: BORDER_RADIUS.full,
         borderWidth: 1,
         borderColor: COLORS.border,
+        alignItems: 'center',
     },
+    tabFlex: {flex: 1},
     tabActive: {
         backgroundColor: COLORS.primaryDark,
         borderColor: COLORS.primaryDark,
     },
-    tabText: {fontFamily: FONTS.medium, fontSize: fs(13), color: COLORS.textSecondary},
+    tabText: {fontFamily: FONTS.medium, fontSize: fs(13), color: COLORS.textSecondary, textAlign: 'center'},
     tabTextActive: {color: '#fff'},
 
     sep: {height: 0.5, backgroundColor: COLORS.border},
@@ -1295,33 +1346,34 @@ const spi = StyleSheet.create({
     },
 
     plugBlock: {
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingTop: SPACING.md,
+        paddingBottom: SPACING.md,
         gap: SPACING.sm,
     },
-    plugScroll: {gap: SPACING.sm, paddingBottom: 2},
-    plugCard: {
+    plugScroll: {
+        gap: SPACING.sm,
+        paddingBottom: 2,
+    },
+    plugTile: {
         alignItems: 'center',
-        backgroundColor: '#f8fafc',
+        gap: SPACING.xs,
+    },
+    plugImgWrap: {
+        width: 64,
+        height: 64,
         borderRadius: BORDER_RADIUS.lg,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        padding: SPACING.sm,
-        minWidth: 72,
-        gap: 4,
+        backgroundColor: '#f1f5f9',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     plugImage: {width: 52, height: 52},
-    plugLetter: {
+    plugFallbackLetter: {
         fontFamily: FONTS.display,
         fontSize: fs(26),
         color: COLORS.text,
-        letterSpacing: -0.5,
-        width: 52,
-        height: 52,
-        textAlign: 'center',
-        textAlignVertical: 'center',
-        lineHeight: 52,
     },
-    plugTypeLabel: {
+    plugTileLabel: {
         fontFamily: FONTS.medium,
         fontSize: fs(11),
         color: COLORS.textSecondary,

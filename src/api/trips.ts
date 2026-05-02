@@ -1,5 +1,5 @@
 import apiClient from './client'
-import { TripListItem, TripGeneralData, TripDashboard, TripForecastBudget } from '../types'
+import { TripListItem, TripGeneralData, TripDashboard, TripForecastBudget, TripWeather } from '../types'
 
 export const tripsApi = {
   getAll: async (userId: number): Promise<TripListItem[]> => {
@@ -24,6 +24,11 @@ export const tripsApi = {
 
   saveBudgetForecast: async (tripId: number, forecast: TripForecastBudget): Promise<void> => {
     await apiClient.post(`/trips/${tripId}/budget`, forecast)
+  },
+
+  getWeather: async (tripId: number): Promise<TripWeather> => {
+    const { data } = await apiClient.get<TripWeather>(`/weather/get/${tripId}`)
+    return data
   },
 
   delete: async (tripId: number): Promise<void> => {

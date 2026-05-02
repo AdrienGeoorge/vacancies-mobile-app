@@ -253,6 +253,51 @@ export interface TripDashboard {
     }
 }
 
+// ─── Weather ───────────────────────────────────────────────────────────────────
+
+export interface WeatherHistorical {
+    is_forecast: false
+    temp_min: number
+    temp_max: number
+    rainfall_days: number
+    rainfall_mm: number
+    daylight_hours: number
+    humidity: number
+    advice: string
+    main_condition: string
+    source: string
+}
+
+export interface WeatherDay {
+    temperature: { min: number; max: number }
+    precipitation: number
+    humidity: number
+    daylight: number
+    wind: number
+    snow: number
+    visibility: number | null
+    aqi: number | null
+    condition: { text: string; icon: string }
+    advice: string
+}
+
+export interface WeatherForecast {
+    forecast: true
+    days: Record<string, WeatherDay>
+}
+
+export interface WeatherDestination {
+    destination: {
+        country: string
+        city: string
+        arrivalDate: string | null
+        departureDate: string | null
+    }
+    weather: WeatherHistorical | WeatherForecast
+}
+
+export type TripWeather = WeatherDestination[]
+
 export type TripState = 'ongoing' | 'upcoming' | 'unplanned' | 'past'
 
 export function getTripStateFromInt(state: 1 | 2 | 3 | 4): TripState {
