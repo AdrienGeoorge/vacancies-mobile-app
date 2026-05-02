@@ -7,6 +7,7 @@ export type AuthStackParamList = {
 export type TripStackParamList = {
   TripsList: undefined
   TripDetail: { tripId: number }
+  TripBudget: { tripId: number; tripName: string }
   CreateEditTrip: { tripId?: number }
 }
 
