@@ -619,8 +619,8 @@ const s = StyleSheet.create({
     },
     coverTitle: {
         fontFamily: FONTS.semiBold,
-        fontSize: fs(25),
-        lineHeight: fs(28),
+        fontSize: fs(23),
+        lineHeight: fs(27),
         color: '#fff',
         letterSpacing: -1,
         textShadowColor: 'rgba(0,0,0,0.5)',
@@ -632,7 +632,6 @@ const s = StyleSheet.create({
         fontFamily: FONTS.regular,
         fontSize: fs(15),
         color: 'rgba(255,255,255,0.85)',
-        marginTop: 1.5,
         textShadowColor: 'rgba(0,0,0,0.4)',
         textShadowOffset: {width: 0, height: 1},
         textShadowRadius: 3,
@@ -690,7 +689,7 @@ const s = StyleSheet.create({
     metaBoxLabelVoyageurs: {color: '#92700a'},
     metaBoxValue: {
         fontFamily: FONTS.semiBold,
-        fontSize: fs(16),
+        fontSize: fs(14),
         color: COLORS.text,
     },
 
