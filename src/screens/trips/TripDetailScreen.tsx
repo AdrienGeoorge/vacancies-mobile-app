@@ -30,7 +30,7 @@ type Props = {
     route: RouteProp<TripStackParamList, 'TripDetail'>
 }
 
-const HEADER_HEIGHT = 260
+const HEADER_HEIGHT = 280
 
 type SectionKey = 'overview' | 'calendar' | 'accommodations' | 'transports' | 'activities' | 'expenses' | 'onSite'
 
@@ -321,12 +321,6 @@ export default function TripDetailScreen({navigation, route}: Props) {
                 ? `Départ dans ${countDaysBeforeOrAfter.days} jour${countDaysBeforeOrAfter.days > 1 ? 's' : ''}`
                 : `Rentré il y a ${countDaysBeforeOrAfter.days} jour${countDaysBeforeOrAfter.days > 1 ? 's' : ''}`
 
-    const daysBadgeColor = countDaysBeforeOrAfter === false || countDaysBeforeOrAfter === 'ongoing'
-        ? {bg: '#ccfbf1', border: COLORS.primaryHover, text: '#0f766e'}
-        : !countDaysBeforeOrAfter.before
-            ? {bg: '#FCE985', border: '#ea983d', text: '#854d0e'}
-            : {bg: '#F7C1BF', border: '#ca8696', text: '#be123c'}
-
     return (
         <View style={s.root}>
             <Animated.View
@@ -410,16 +404,13 @@ export default function TripDetailScreen({navigation, route}: Props) {
                     )}
                     <View style={s.coverGradient}/>
                     <View style={s.coverInfo}>
-                        <Text style={s.coverTitle}>{trip.name}</Text>
-                        {countryLabel && <Text style={s.coverCountries}>{countryLabel}</Text>}
                         {daysLabel && (
-                            <View style={[s.daysBadge, {
-                                backgroundColor: daysBadgeColor.bg,
-                                borderColor: daysBadgeColor.border
-                            }]}>
-                                <Text style={[s.daysBadgeText, {color: daysBadgeColor.text}]}>{daysLabel}</Text>
+                            <View style={s.daysBadge}>
+                                <Text style={s.daysBadgeText}>{daysLabel}</Text>
                             </View>
                         )}
+                        <Text style={s.coverTitle}>{trip.name}</Text>
+                        {countryLabel && <Text style={s.coverCountries}>{countryLabel}</Text>}
                     </View>
                 </View>
 
@@ -468,8 +459,8 @@ export default function TripDetailScreen({navigation, route}: Props) {
                     {activeSection === 'overview' && (
                         <>
                             {trip.description ? (
-                                <View style={s.section}>
-                                    <Text style={s.sectionTitle}>Description</Text>
+                                <View style={s.descriptionSection}>
+                                    <Text style={s.descriptionTitle}>Description</Text>
                                     <Text style={s.descriptionText}>{trip.description}</Text>
                                 </View>
                             ) : null}
@@ -583,20 +574,27 @@ const s = StyleSheet.create({
     },
     daysBadge: {
         alignSelf: 'flex-start',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
+        backgroundColor: 'rgba(255,255,255,0.3)',
         borderRadius: BORDER_RADIUS.full,
-        marginTop: SPACING.sm,
+        paddingHorizontal: 11,
+        paddingVertical: 4,
         borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.25)',
+        marginBottom: SPACING.md
     },
-    daysBadgeText: {fontFamily: FONTS.medium, fontSize: fs(12), color: '#fff'},
+    daysBadgeText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(10.5),
+        color: '#fff',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
     coverTitle: {
-        fontFamily: FONTS.display,
-        fontSize: fs(28),
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(25),
         lineHeight: fs(28),
         color: '#fff',
-        letterSpacing: -0.5,
+        letterSpacing: -1,
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: {width: 0, height: 1},
         textShadowRadius: 4,
@@ -605,7 +603,7 @@ const s = StyleSheet.create({
         fontFamily: FONTS.regular,
         fontSize: fs(15),
         color: 'rgba(255,255,255,0.85)',
-        marginTop: 2,
+        marginTop: 1.5,
         textShadowColor: 'rgba(0,0,0,0.4)',
         textShadowOffset: {width: 0, height: 1},
         textShadowRadius: 3,
@@ -625,8 +623,14 @@ const s = StyleSheet.create({
         borderRightWidth: 1,
         borderColor: COLORS.border,
     },
-    metaLabel: {fontFamily: FONTS.regular, fontSize: fs(11), color: COLORS.textSecondary, marginBottom: 2},
-    metaValue: {fontFamily: FONTS.semiBold, fontSize: fs(13), color: COLORS.text},
+    metaLabel: {
+        fontFamily: FONTS.regular,
+        fontSize: fs(11.5),
+        color: COLORS.textSecondary,
+        marginBottom: 2,
+        textTransform: 'uppercase'
+    },
+    metaValue: {fontFamily: FONTS.semiBold, fontSize: fs(14), color: COLORS.text},
 
     tabsScroll: {backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: COLORS.border},
     tabsContent: {paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.xs},
@@ -660,11 +664,20 @@ const s = StyleSheet.create({
         marginBottom: SPACING.sm,
     },
 
+    descriptionSection: {
+        marginHorizontal: SPACING.lg,
+        marginBottom: SPACING.md,
+    },
+    descriptionTitle: {
+        textTransform: 'uppercase',
+        fontFamily: FONTS.semiBold,
+        marginBottom: SPACING.xs,
+        color: COLORS.textSecondary,
+    },
     descriptionText: {
         fontFamily: FONTS.regular,
         fontSize: fs(14),
-        color: COLORS.textSecondary,
-        lineHeight: fs(21),
+        lineHeight: fs(19),
     },
 
     eventRow: {flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, paddingVertical: 4},

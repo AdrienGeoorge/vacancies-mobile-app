@@ -35,11 +35,11 @@ type Props = {
 
 type FilterKey = 'all' | 'upcoming' | 'ongoing' | 'past'
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-    {key: 'all', label: 'Tous'},
-    {key: 'ongoing', label: 'En cours'},
-    {key: 'upcoming', label: 'À venir'},
-    {key: 'past', label: 'Passés'},
+const FILTERS: { key: FilterKey; label: string, flex: number }[] = [
+    {key: 'all', label: 'Tous', flex: 0.7},
+    {key: 'ongoing', label: 'En cours', flex: 1.25},
+    {key: 'upcoming', label: 'À venir', flex: 1.1},
+    {key: 'past', label: 'Passés', flex: 1},
 ]
 
 const PLACEHOLDER_GRADIENTS: [string, string][] = [
@@ -276,7 +276,7 @@ export default function TripsListScreen({navigation}: Props) {
                             {FILTERS.map(f => (
                                 <Pressable
                                     key={f.key}
-                                    style={[s.filterPill, filter === f.key && s.filterPillActive]}
+                                    style={[s.filterPill, filter === f.key && s.filterPillActive, {flex: f.flex}]}
                                     onPress={() => {
                                         setFilter(f.key)
                                         flatListRef.current?.scrollToOffset({offset: 0, animated: true})
@@ -405,7 +405,6 @@ const s = StyleSheet.create({
         marginHorizontal: SPACING.sm + 2,
     },
     filterPill: {
-        flex: 1,
         paddingHorizontal: SPACING.md,
         paddingVertical: 6,
         borderRadius: BORDER_RADIUS.full,
@@ -418,8 +417,9 @@ const s = StyleSheet.create({
         borderColor: COLORS.primary,
     },
     filterPillText: {
+        textAlign: 'center',
         fontFamily: FONTS.medium,
-        fontSize: fs(13),
+        fontSize: fs(12),
         color: COLORS.textSecondary,
     },
     filterPillTextActive: {color: '#fff'},
@@ -443,7 +443,7 @@ const s = StyleSheet.create({
         marginHorizontal: SPACING.md,
     },
     featuredDark: {
-        height: 170,
+        height: fs(170),
         backgroundColor: '#0d1f30',
         position: 'relative',
     },
@@ -555,6 +555,7 @@ const s = StyleSheet.create({
     },
     compactDescription: {
         marginVertical: 10,
+        fontSize: fs(14),
         lineHeight: fs(13),
     },
     compactMeta: {
