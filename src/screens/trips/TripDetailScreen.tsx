@@ -7,7 +7,6 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Animated
 } from 'react-native'
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
 import {NativeStackNavigationProp} from '@react-navigation/native-stack'
@@ -24,13 +23,14 @@ import {
 import BudgetSection from './BudgetSection'
 import {BASE_URL, BORDER_RADIUS, COLORS, FONTS, SPACING, fs} from '../../constants'
 import {BackArrow, EditIcon} from "../../utils/icons.tsx"
+import {TAB_BAR_HEIGHT} from '../../navigation/MainNavigator'
 
 type Props = {
     navigation: NativeStackNavigationProp<TripStackParamList, 'TripDetail'>
     route: RouteProp<TripStackParamList, 'TripDetail'>
 }
 
-const HEADER_HEIGHT = 350
+const HEADER_HEIGHT = 250
 
 type SectionKey = 'overview' | 'calendar' | 'accommodations' | 'transports' | 'activities' | 'expenses' | 'onSite'
 
@@ -261,22 +261,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
         clearCurrentTrip
     } = useTripStore()
     const [activeSection, setActiveSection] = useState<SectionKey>('overview')
-    const [navBarHeight, setNavBarHeight] = useState(0)
-    const [stickyTabVisible, setStickyTabVisible] = useState(false)
-    const scrollY = useRef(new Animated.Value(0)).current
     const sectionsScrollRef = useRef<ScrollView>(null)
-
-    const TABS_THRESHOLD = HEADER_HEIGHT + 160
-    const naturalTabOpacity = scrollY.interpolate({
-        inputRange: [TABS_THRESHOLD - 20, TABS_THRESHOLD],
-        outputRange: [1, 0],
-        extrapolate: 'clamp',
-    })
-    const stickyTabOpacity = scrollY.interpolate({
-        inputRange: [TABS_THRESHOLD - 20, TABS_THRESHOLD],
-        outputRange: [0, 1],
-        extrapolate: 'clamp',
-    })
 
     useEffect(() => {
         fetchTripDetail(tripId)
@@ -307,42 +292,75 @@ export default function TripDetailScreen({navigation, route}: Props) {
         ? null
         : countries.slice(0, -1).join(', ') + (countries.length > 1 ? ' et ' : '') + countries[countries.length - 1]
 
-    const headerOpacity = scrollY.interpolate({
-        inputRange: [HEADER_HEIGHT - 120, HEADER_HEIGHT - 80],
-        outputRange: [0, 1],
-        extrapolate: 'clamp',
-    })
-
     const daysLabel = countDaysBeforeOrAfter === false
         ? null
         : countDaysBeforeOrAfter === 'ongoing'
-            ? 'C\'est le moment : bon voyage !'
+            ? 'C\'est le moment !'
             : !countDaysBeforeOrAfter.before
                 ? `Départ dans ${countDaysBeforeOrAfter.days} jour${countDaysBeforeOrAfter.days > 1 ? 's' : ''}`
                 : `Rentré il y a ${countDaysBeforeOrAfter.days} jour${countDaysBeforeOrAfter.days > 1 ? 's' : ''}`
 
     return (
         <View style={s.root}>
-            <Animated.View
-                style={[s.navBar, {paddingTop: insets.top, opacity: headerOpacity}]}
-                onLayout={e => setNavBarHeight(e.nativeEvent.layout.height)}
-            >
-                <View style={s.navTitleRow}>
-                    <TouchableOpacity style={s.navBackBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <View style={s.coverContainer}>
+                {imageUri ? (
+                    <Image source={{uri: imageUri}} style={s.cover} resizeMode="cover"/>
+                ) : (
+                    <View style={[s.cover, s.coverPlaceholder]}>
+                        <Text style={s.coverPlaceholderEmoji}>🏔️</Text>
+                    </View>
+                )}
+                <View style={s.coverGradient}/>
+
+                <View style={[s.coverBar, {paddingTop: insets.top + SPACING.sm}]}>
+                    <TouchableOpacity style={s.coverBarBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
                         <BackArrow/>
                     </TouchableOpacity>
-                    <Text style={s.navTitle} numberOfLines={1}>{trip.name}</Text>
-                    <TouchableOpacity style={s.navEditBtn}
+
+                    <View style={s.coverBarCenter}>
+                        {daysLabel && (
+                            <View style={s.daysBadge}>
+                                <Text style={s.daysBadgeText}>{daysLabel}</Text>
+                            </View>
+                        )}
+                        <Text style={s.coverTitle} numberOfLines={2}>{trip.name}</Text>
+                        {countryLabel && <Text style={s.coverCountries}>{countryLabel}</Text>}
+                    </View>
+
+                    <TouchableOpacity style={s.coverBarBtn}
                                       onPress={() => navigation.navigate('CreateEditTrip', {tripId})}
                                       activeOpacity={0.8}>
                         <EditIcon/>
                     </TouchableOpacity>
                 </View>
-            </Animated.View>
+            </View>
 
-            <Animated.View style={[s.stickyTabBar, {top: navBarHeight, opacity: stickyTabOpacity}]}
-                           pointerEvents={stickyTabVisible ? 'auto' : 'none'}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsContent}>
+            <View style={s.infoCard}>
+                <View style={s.metaRow}>
+                    {trip.departureDate && (
+                        <View style={[s.metaBox, s.metaBoxDepart]}>
+                            <Text style={[s.metaBoxLabel, s.metaBoxLabelDepart]}>Départ</Text>
+                            <Text style={s.metaBoxValue}>{formatDate(trip.departureDate)}</Text>
+                        </View>
+                    )}
+                    {trip.returnDate && (
+                        <View style={[s.metaBox, s.metaBoxRetour]}>
+                            <Text style={[s.metaBoxLabel, s.metaBoxLabelRetour]}>Retour</Text>
+                            <Text style={s.metaBoxValue}>{formatDate(trip.returnDate)}</Text>
+                        </View>
+                    )}
+                    <View style={[s.metaBox, s.metaBoxVoyageurs]}>
+                        <Text style={[s.metaBoxLabel, s.metaBoxLabelVoyageurs]}>Voyageurs</Text>
+                        <Text style={s.metaBoxValue}>{(trip.tripTravelers?.length ?? 0) + 1}</Text>
+                    </View>
+                </View>
+
+                <ScrollView
+                    ref={sectionsScrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.tabsContent}
+                >
                     {SECTIONS.map(sec => (
                         <TouchableOpacity
                             key={sec.key}
@@ -356,148 +374,52 @@ export default function TripDetailScreen({navigation, route}: Props) {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </Animated.View>
+            </View>
 
-            <Animated.View
-                style={[
-                    s.floatingButtons,
-                    {
-                        top: insets.top + SPACING.sm,
-                        opacity: scrollY.interpolate({
-                            inputRange: [HEADER_HEIGHT - 100, HEADER_HEIGHT - 30],
-                            outputRange: [1, 0],
-                            extrapolate: 'clamp',
-                        }),
-                    },
-                ]}
-                pointerEvents="auto">
-                <TouchableOpacity style={s.floatingBtnBack} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                    <BackArrow/>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.floatingBtnModifier}
-                                  onPress={() => navigation.navigate('CreateEditTrip', {tripId})}
-                                  activeOpacity={0.8}>
-                    <Text style={s.floatingBtnModifierText}>Modifier</Text>
-                </TouchableOpacity>
-            </Animated.View>
-
-            <Animated.ScrollView
-                onScroll={Animated.event(
-                    [{nativeEvent: {contentOffset: {y: scrollY}}}],
-                    {
-                        useNativeDriver: true,
-                        listener: (e: any) => {
-                            const y = e.nativeEvent.contentOffset.y
-                            setStickyTabVisible(y >= TABS_THRESHOLD - 20)
-                        },
-                    }
-                )}
-                scrollEventThrottle={16}
+            {/* Seul le contenu scrolle */}
+            <ScrollView
+                style={s.contentScroll}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 20}}
             >
-                <View style={s.coverContainer}>
-                    {imageUri ? (
-                        <Image source={{uri: imageUri}} style={s.cover} resizeMode="cover"/>
-                    ) : (
-                        <View style={[s.cover, s.coverPlaceholder]}>
-                            <Text style={s.coverPlaceholderEmoji}>🏔️</Text>
-                        </View>
-                    )}
-                    <View style={s.coverGradient}/>
-                    <View style={s.coverInfo}>
-                        {daysLabel && (
-                            <View style={s.daysBadge}>
-                                <Text style={s.daysBadgeText}>{daysLabel}</Text>
+                {activeSection === 'overview' && (
+                    <>
+                        {trip.description ? (
+                            <View style={s.descriptionSection}>
+                                <Text style={s.descriptionTitle}>Description</Text>
+                                <Text style={s.descriptionText}>{trip.description}</Text>
                             </View>
+                        ) : null}
+                        {budget && (
+                            <BudgetSection
+                                tripId={tripId}
+                                budget={budget}
+                                forecast={forecastBudget}
+                                countTravelers={currentDashboard?.countTravelers ?? 1}
+                                symbol={symbol}
+                            />
                         )}
-                        <Text style={s.coverTitle}>{trip.name}</Text>
-                        {countryLabel && <Text style={s.coverCountries}>{countryLabel}</Text>}
-                    </View>
-                </View>
-
-                <View style={s.infoCard}>
-                    <View style={s.metaRow}>
-                        {trip.departureDate && (
-                            <View style={[s.metaBox, s.metaBoxDepart]}>
-                                <Text style={[s.metaBoxLabel, s.metaBoxLabelDepart]}>Départ</Text>
-                                <Text style={s.metaBoxValue}>{formatDate(trip.departureDate)}</Text>
-                            </View>
-                        )}
-                        {trip.returnDate && (
-                            <View style={[s.metaBox, s.metaBoxRetour]}>
-                                <Text style={[s.metaBoxLabel, s.metaBoxLabelRetour]}>Retour</Text>
-                                <Text style={s.metaBoxValue}>{formatDate(trip.returnDate)}</Text>
-                            </View>
-                        )}
-                        <View style={[s.metaBox, s.metaBoxVoyageurs]}>
-                            <Text style={[s.metaBoxLabel, s.metaBoxLabelVoyageurs]}>Voyageurs</Text>
-                            <Text style={s.metaBoxValue}>{(trip.tripTravelers?.length ?? 0) + 1}</Text>
-                        </View>
-                    </View>
-
-                    <Animated.View style={[{opacity: naturalTabOpacity}]}>
-                        <ScrollView
-                            ref={sectionsScrollRef}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={s.tabsContent}
-                        >
-                            {SECTIONS.map(sec => (
-                                <TouchableOpacity
-                                    key={sec.key}
-                                    style={[s.tab, activeSection === sec.key && s.tabActive]}
-                                    onPress={() => setActiveSection(sec.key)}
-                                    activeOpacity={0.8}
-                                >
-                                    <Text style={[s.tabLabel, activeSection === sec.key && s.tabLabelActive]}>
-                                        {sec.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </Animated.View>
-                </View>
-
-                <View style={[s.content, {paddingBottom: insets.bottom}]}>
-                    {activeSection === 'overview' && (
-                        <>
-                            {trip.description ? (
-                                <View style={s.descriptionSection}>
-                                    <Text style={s.descriptionTitle}>Description</Text>
-                                    <Text style={s.descriptionText}>{trip.description}</Text>
-                                </View>
-                            ) : null}
-                            {budget && (
-                                <BudgetSection
-                                    tripId={tripId}
-                                    budget={budget}
-                                    forecast={forecastBudget}
-                                    countTravelers={currentDashboard?.countTravelers ?? 1}
-                                    symbol={symbol}
-                                />
-                            )}
-                        </>
-                    )}
-                    {activeSection === 'accommodations' && (
-                        <AccommodationsSection items={trip.accommodations ?? []} symbol={symbol}/>
-                    )}
-                    {activeSection === 'transports' && (
-                        <TransportsSection items={trip.transports ?? []} symbol={symbol}/>
-                    )}
-                    {activeSection === 'activities' && (
-                        <ActivitiesSection items={trip.activities ?? []} symbol={symbol}/>
-                    )}
-                    {activeSection === 'expenses' && (
-                        <ExpensesSection items={trip.variousExpensives ?? []} symbol={symbol}/>
-                    )}
-                    {activeSection === 'onSite' && (
-                        <OnSiteSection items={trip.onSiteExpenses ?? []} symbol={symbol}/>
-                    )}
-                    {activeSection === 'calendar' && (
-                        <CalendarSection events={trip.planningEvents ?? []}/>
-                    )}
-                </View>
-            </Animated.ScrollView>
+                    </>
+                )}
+                {activeSection === 'accommodations' && (
+                    <AccommodationsSection items={trip.accommodations ?? []} symbol={symbol}/>
+                )}
+                {activeSection === 'transports' && (
+                    <TransportsSection items={trip.transports ?? []} symbol={symbol}/>
+                )}
+                {activeSection === 'activities' && (
+                    <ActivitiesSection items={trip.activities ?? []} symbol={symbol}/>
+                )}
+                {activeSection === 'expenses' && (
+                    <ExpensesSection items={trip.variousExpensives ?? []} symbol={symbol}/>
+                )}
+                {activeSection === 'onSite' && (
+                    <OnSiteSection items={trip.onSiteExpenses ?? []} symbol={symbol}/>
+                )}
+                {activeSection === 'calendar' && (
+                    <CalendarSection events={trip.planningEvents ?? []}/>
+                )}
+            </ScrollView>
         </View>
     )
 }
@@ -505,84 +427,6 @@ export default function TripDetailScreen({navigation, route}: Props) {
 const s = StyleSheet.create({
     root: {flex: 1, backgroundColor: '#f8fafc'},
     loader: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-
-    navBar: {
-        position: 'absolute',
-        top: 0, left: 0, right: 0,
-        zIndex: 100,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    navTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        gap: SPACING.sm,
-    },
-    navBackBtn: {padding: SPACING.xs},
-    navTitle: {
-        flex: 1,
-        fontFamily: FONTS.semiBold,
-        fontSize: fs(16),
-        color: COLORS.text,
-        letterSpacing: -0.2,
-    },
-    navEditBtn: {padding: SPACING.xs},
-
-    stickyTabBar: {
-        position: 'absolute',
-        left: 0, right: 0,
-        zIndex: 99,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-
-    floatingButtons: {
-        position: 'absolute',
-        left: SPACING.md,
-        right: SPACING.md,
-        zIndex: 50,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    floatingBtnBack: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.88)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    floatingBtnModifier: {
-        backgroundColor: '#fff',
-        borderRadius: BORDER_RADIUS.full,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    floatingBtnModifierText: {
-        fontFamily: FONTS.semiBold,
-        fontSize: fs(13),
-        color: COLORS.text,
-    },
 
     coverContainer: {height: HEADER_HEIGHT, backgroundColor: '#c9d4e0'},
     cover: {width: '100%', height: '100%'},
@@ -593,49 +437,66 @@ const s = StyleSheet.create({
         top: 0, bottom: 0, left: 0, right: 0,
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
-    coverInfo: {
+
+    coverBar: {
         position: 'absolute',
-        bottom: SPACING.md,
-        left: SPACING.md,
-        right: SPACING.md,
-        paddingBottom: SPACING.xxl,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row',
+        paddingHorizontal: SPACING.md,
+        paddingBottom: SPACING.md,
+        gap: SPACING.md,
     },
+    coverBarBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+    },
+    coverBarCenter: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+    },
+
     daysBadge: {
         alignSelf: 'center',
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.25)',
         borderRadius: BORDER_RADIUS.full,
         paddingHorizontal: 11,
         paddingVertical: 4,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.25)',
-        marginBottom: SPACING.md
+        borderColor: 'rgba(255,255,255,0.3)',
+        marginTop: 5,
+        marginBottom: 10,
     },
     daysBadgeText: {
         fontFamily: FONTS.semiBold,
-        fontSize: fs(10.5),
+        fontSize: fs(10),
         color: '#fff',
-        letterSpacing: 0.5,
+        letterSpacing: 0.8,
         textTransform: 'uppercase',
     },
     coverTitle: {
         fontFamily: FONTS.semiBold,
-        fontSize: fs(23),
-        lineHeight: fs(27),
+        fontSize: fs(20),
+        lineHeight: fs(24),
         color: '#fff',
-        letterSpacing: -1,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: {width: 0, height: 1},
-        textShadowRadius: 4,
-        textAlign: 'center'
+        letterSpacing: -0.5,
+        textAlign: 'center',
     },
     coverCountries: {
         fontFamily: FONTS.regular,
-        fontSize: fs(15),
-        color: 'rgba(255,255,255,0.85)',
-        textShadowColor: 'rgba(0,0,0,0.4)',
-        textShadowOffset: {width: 0, height: 1},
-        textShadowRadius: 3,
-        textAlign: 'center'
+        fontSize: fs(13),
+        color: 'rgba(255,255,255,0.8)',
+        textAlign: 'center',
     },
 
     infoCard: {
@@ -703,6 +564,7 @@ const s = StyleSheet.create({
     tabLabel: {fontFamily: FONTS.medium, fontSize: fs(13), color: COLORS.textSecondary},
     tabLabelActive: {color: '#fff', fontFamily: FONTS.semiBold},
 
+    contentScroll: {flex: 1, backgroundColor: '#f8fafc'},
     content: {paddingTop: SPACING.md},
 
     section: {
