@@ -30,7 +30,7 @@ type Props = {
     route: RouteProp<TripStackParamList, 'TripDetail'>
 }
 
-const HEADER_HEIGHT = 280
+const HEADER_HEIGHT = 350
 
 type SectionKey = 'overview' | 'calendar' | 'accommodations' | 'transports' | 'activities' | 'expenses' | 'onSite'
 
@@ -266,7 +266,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
     const scrollY = useRef(new Animated.Value(0)).current
     const sectionsScrollRef = useRef<ScrollView>(null)
 
-    const TABS_THRESHOLD = HEADER_HEIGHT - 25
+    const TABS_THRESHOLD = HEADER_HEIGHT + 160
     const naturalTabOpacity = scrollY.interpolate({
         inputRange: [TABS_THRESHOLD - 20, TABS_THRESHOLD],
         outputRange: [1, 0],
@@ -364,19 +364,20 @@ export default function TripDetailScreen({navigation, route}: Props) {
                     {
                         top: insets.top + SPACING.sm,
                         opacity: scrollY.interpolate({
-                            inputRange: [HEADER_HEIGHT - 120, HEADER_HEIGHT - 80],
+                            inputRange: [HEADER_HEIGHT - 100, HEADER_HEIGHT - 30],
                             outputRange: [1, 0],
                             extrapolate: 'clamp',
                         }),
                     },
                 ]}
                 pointerEvents="auto">
-                <TouchableOpacity style={s.floatingBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <TouchableOpacity style={s.floatingBtnBack} onPress={() => navigation.goBack()} activeOpacity={0.8}>
                     <BackArrow/>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.floatingBtn} onPress={() => navigation.navigate('CreateEditTrip', {tripId})}
+                <TouchableOpacity style={s.floatingBtnModifier}
+                                  onPress={() => navigation.navigate('CreateEditTrip', {tripId})}
                                   activeOpacity={0.8}>
-                    <EditIcon/>
+                    <Text style={s.floatingBtnModifierText}>Modifier</Text>
                 </TouchableOpacity>
             </Animated.View>
 
@@ -414,46 +415,48 @@ export default function TripDetailScreen({navigation, route}: Props) {
                     </View>
                 </View>
 
-                <View style={s.metaRow}>
-                    {trip.departureDate && (
-                        <View style={s.metaItem}>
-                            <Text style={s.metaLabel}>Départ</Text>
-                            <Text style={s.metaValue}>{formatDate(trip.departureDate)}</Text>
+                <View style={s.infoCard}>
+                    <View style={s.metaRow}>
+                        {trip.departureDate && (
+                            <View style={[s.metaBox, s.metaBoxDepart]}>
+                                <Text style={[s.metaBoxLabel, s.metaBoxLabelDepart]}>Départ</Text>
+                                <Text style={s.metaBoxValue}>{formatDate(trip.departureDate)}</Text>
+                            </View>
+                        )}
+                        {trip.returnDate && (
+                            <View style={[s.metaBox, s.metaBoxRetour]}>
+                                <Text style={[s.metaBoxLabel, s.metaBoxLabelRetour]}>Retour</Text>
+                                <Text style={s.metaBoxValue}>{formatDate(trip.returnDate)}</Text>
+                            </View>
+                        )}
+                        <View style={[s.metaBox, s.metaBoxVoyageurs]}>
+                            <Text style={[s.metaBoxLabel, s.metaBoxLabelVoyageurs]}>Voyageurs</Text>
+                            <Text style={s.metaBoxValue}>{(trip.tripTravelers?.length ?? 0) + 1}</Text>
                         </View>
-                    )}
-                    {trip.returnDate && (
-                        <View style={[s.metaItem, s.metaItemBordered]}>
-                            <Text style={s.metaLabel}>Retour</Text>
-                            <Text style={s.metaValue}>{formatDate(trip.returnDate)}</Text>
-                        </View>
-                    )}
-                    <View style={s.metaItem}>
-                        <Text style={s.metaLabel}>Voyageurs</Text>
-                        <Text style={s.metaValue}>{(trip.tripTravelers?.length ?? 0) + 1}</Text>
                     </View>
-                </View>
 
-                <Animated.View style={[s.tabsScroll, {opacity: naturalTabOpacity}]}>
-                    <ScrollView
-                        ref={sectionsScrollRef}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={s.tabsContent}
-                    >
-                        {SECTIONS.map(sec => (
-                            <TouchableOpacity
-                                key={sec.key}
-                                style={[s.tab, activeSection === sec.key && s.tabActive]}
-                                onPress={() => setActiveSection(sec.key)}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={[s.tabLabel, activeSection === sec.key && s.tabLabelActive]}>
-                                    {sec.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </Animated.View>
+                    <Animated.View style={[{opacity: naturalTabOpacity}]}>
+                        <ScrollView
+                            ref={sectionsScrollRef}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={s.tabsContent}
+                        >
+                            {SECTIONS.map(sec => (
+                                <TouchableOpacity
+                                    key={sec.key}
+                                    style={[s.tab, activeSection === sec.key && s.tabActive]}
+                                    onPress={() => setActiveSection(sec.key)}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={[s.tabLabel, activeSection === sec.key && s.tabLabelActive]}>
+                                        {sec.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </Animated.View>
+                </View>
 
                 <View style={[s.content, {paddingBottom: insets.bottom}]}>
                     {activeSection === 'overview' && (
@@ -507,7 +510,9 @@ const s = StyleSheet.create({
         position: 'absolute',
         top: 0, left: 0, right: 0,
         zIndex: 100,
-        backgroundColor: COLORS.primaryDark,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
     },
     navTitleRow: {
         flexDirection: 'row',
@@ -521,7 +526,7 @@ const s = StyleSheet.create({
         flex: 1,
         fontFamily: FONTS.semiBold,
         fontSize: fs(16),
-        color: '#fff',
+        color: COLORS.text,
         letterSpacing: -0.2,
     },
     navEditBtn: {padding: SPACING.xs},
@@ -546,18 +551,40 @@ const s = StyleSheet.create({
         right: SPACING.md,
         zIndex: 50,
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
     },
-    floatingBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+    floatingBtnBack: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.88)',
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    floatingBtnModifier: {
+        backgroundColor: '#fff',
+        borderRadius: BORDER_RADIUS.full,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: 8,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    floatingBtnModifierText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(13),
+        color: COLORS.text,
     },
 
-    coverContainer: {height: HEADER_HEIGHT, position: 'relative'},
+    coverContainer: {height: HEADER_HEIGHT, backgroundColor: '#c9d4e0'},
     cover: {width: '100%', height: '100%'},
     coverPlaceholder: {backgroundColor: '#cbd5e1', alignItems: 'center', justifyContent: 'center'},
     coverPlaceholderEmoji: {fontSize: 64},
@@ -571,9 +598,10 @@ const s = StyleSheet.create({
         bottom: SPACING.md,
         left: SPACING.md,
         right: SPACING.md,
+        paddingBottom: SPACING.xxl,
     },
     daysBadge: {
-        alignSelf: 'flex-start',
+        alignSelf: 'center',
         backgroundColor: 'rgba(255,255,255,0.3)',
         borderRadius: BORDER_RADIUS.full,
         paddingHorizontal: 11,
@@ -598,6 +626,7 @@ const s = StyleSheet.create({
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: {width: 0, height: 1},
         textShadowRadius: 4,
+        textAlign: 'center'
     },
     coverCountries: {
         fontFamily: FONTS.regular,
@@ -607,45 +636,73 @@ const s = StyleSheet.create({
         textShadowColor: 'rgba(0,0,0,0.4)',
         textShadowOffset: {width: 0, height: 1},
         textShadowRadius: 3,
+        textAlign: 'center'
+    },
+
+    infoCard: {
+        backgroundColor: '#fff',
+        marginTop: -50,
+        borderRadius: BORDER_RADIUS.xl,
+        marginHorizontal: 20,
+        overflow: 'hidden',
+        padding: SPACING.sm,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+
+    titleSection: {
+        paddingHorizontal: SPACING.lg,
+        paddingTop: SPACING.lg,
+        paddingBottom: SPACING.md,
     },
 
     metaRow: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.lg,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        gap: SPACING.sm,
+        marginBottom: SPACING.xs
     },
-    metaItem: {flex: 1, alignItems: 'center'},
-    metaItemBordered: {
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
-        borderColor: COLORS.border,
-    },
-    metaLabel: {
-        fontFamily: FONTS.regular,
-        fontSize: fs(11.5),
-        color: COLORS.textSecondary,
-        marginBottom: 2,
-        textTransform: 'uppercase'
-    },
-    metaValue: {fontFamily: FONTS.semiBold, fontSize: fs(14), color: COLORS.text},
-
-    tabsScroll: {backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: COLORS.border},
-    tabsContent: {paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.xs},
-    tab: {
-        flexDirection: 'row',
+    metaBox: {
+        flex: 1,
+        borderRadius: BORDER_RADIUS.lg,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: SPACING.sm,
+        gap: 3,
+        display: 'flex',
         alignItems: 'center',
-        gap: 5,
+        justifyContent: 'center',
+    },
+    metaBoxDepart: {backgroundColor: '#fde8e2'},
+    metaBoxRetour: {backgroundColor: '#dff2ee'},
+    metaBoxVoyageurs: {backgroundColor: '#fef3c7'},
+    metaBoxLabel: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(10),
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
+    metaBoxLabelDepart: {color: '#b94030'},
+    metaBoxLabelRetour: {color: '#0f766e'},
+    metaBoxLabelVoyageurs: {color: '#92700a'},
+    metaBoxValue: {
+        fontFamily: FONTS.semiBold,
+        fontSize: fs(16),
+        color: COLORS.text,
+    },
+
+    tabsContent: {paddingTop: SPACING.sm, gap: SPACING.xs},
+    tab: {
         paddingHorizontal: SPACING.md,
         paddingVertical: 8,
-        borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.full,
     },
-    tabActive: {backgroundColor: COLORS.primary},
+    tabActive: {backgroundColor: '#1a1a2e'},
     tabLabel: {fontFamily: FONTS.medium, fontSize: fs(13), color: COLORS.textSecondary},
-    tabLabelActive: {color: '#fff'},
+    tabLabelActive: {color: '#fff', fontFamily: FONTS.semiBold},
 
     content: {paddingTop: SPACING.md},
 
